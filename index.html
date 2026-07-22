@@ -2,19 +2,44 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Codex работает!</title>
-  <style>
-    body {
-      display: grid;
-      min-height: 100vh;
-      margin: 0;
-      place-items: center;
-      font-family: sans-serif;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#080b16">
+  <title>Захват арены</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <strong>Codex работает!</strong>
+  <main class="game-shell">
+    <header class="hud" aria-label="Состояние игрока">
+      <div class="brand">ARENA // <span id="arena-number">01</span></div>
+      <div class="meter-group">
+        <label>Корпус <progress id="health" max="100" value="100"></progress></label>
+        <label>Щит <progress id="shield" max="100" value="100"></progress></label>
+      </div>
+      <div id="status" class="status">Найдите точку захвата</div>
+    </header>
+
+    <section class="viewport" aria-label="Игровая арена">
+      <canvas id="game" width="960" height="600"></canvas>
+      <div id="message" class="message" aria-live="polite"></div>
+      <button id="restart" class="restart" type="button" hidden>Начать заново</button>
+    </section>
+
+    <section class="mobile-controls" aria-label="Сенсорное управление">
+      <div class="dpad">
+        <button data-direction="up" aria-label="Вверх">▲</button>
+        <button data-direction="left" aria-label="Влево">◀</button>
+        <button data-direction="down" aria-label="Вниз">▼</button>
+        <button data-direction="right" aria-label="Вправо">▶</button>
+      </div>
+      <button id="shield-button" class="shield-button" type="button">ЩИТ</button>
+    </section>
+
+    <footer class="help">
+      <span>WASD / стрелки — движение</span>
+      <span>Мышь — направление щита</span>
+      <span>Пробел / ПКМ — активировать щит</span>
+    </footer>
+  </main>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
