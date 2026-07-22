@@ -4,7 +4,7 @@ import { updateGame } from './game.js';
 import { createRenderer } from './renderer.js';
 import { createUi } from './ui.js';
 import { ECONOMY } from './config.js';
-import { buyUpgrade, createRunState, drawOffers } from './upgrades.js';
+import { buyModule, buyUpgrade, createRunState, drawOffers, MODULES } from './upgrades.js';
 import { markTransition } from './maze.js';
 import { createMinimap } from './minimap.js';
 
@@ -18,6 +18,9 @@ let state = createGameState(run.maze.rooms.get(run.currentRoomId), run);
 run.roomStates.set(run.currentRoomId, state);
 let previousTime = performance.now();
 let pendingRoom = null;
+let currentOffers = [];
+let purchasedOffers = new Set();
+let shopMode = 'upgrade';
 const shop = document.querySelector('#shop');
 const shopCards = document.querySelector('#shop-cards');
 const shopScore = document.querySelector('#shop-score');
@@ -28,13 +31,14 @@ function clearInput() {
   input.keys.clear();
   input.shield = false;
   input.attack = false;
+  input.ability = false;
 }
 
 function playerSnapshot(player) {
   return {
     health: player.health,
     shield: player.shield,
-    armor: [...player.armor],
+    armor: player.armor.map(facet => ({ ...facet })),
     aim: player.aim
   };
 }
@@ -72,27 +76,41 @@ function reset() {
 function continueRun() {
   shop.hidden = true;
   state.phase = pendingRoom.previousPhase;
-  enterRoom(pendingRoom.targetId, pendingRoom.side);
+  if (pendingRoom.targetId) enterRoom(pendingRoom.targetId, pendingRoom.side);
   pendingRoom = null;
 }
 
 function renderShop() {
   shopScore.textContent = `${run.score} очков`;
+  reroll.hidden = shopMode === 'merchant';
   reroll.disabled = run.score < ECONOMY.rerollCost;
-  shopCards.replaceChildren(...drawOffers().map(upgrade => {
+  document.querySelector('#shop-kicker').textContent = shopMode === 'merchant' ? 'КОМНАТА ТОРГОВЦА' : 'МЕЖДУ АРЕНАМИ';
+  document.querySelector('#shop-title').textContent = shopMode === 'merchant' ? 'Улучшения и классовые модули' : 'Магазин улучшений';
+  shopContinue.textContent = shopMode === 'merchant' ? 'Покинуть торговца' : 'Продолжить';
+  const offers = shopMode === 'merchant' ? [...currentOffers, ...MODULES] : currentOffers;
+  shopCards.replaceChildren(...offers.map(upgrade => {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'upgrade-card';
-    card.disabled = run.score < upgrade.price;
+    const isModule = MODULES.includes(upgrade);
+    card.disabled = run.score < upgrade.price || (isModule ? run.module === upgrade.id : purchasedOffers.has(upgrade.id));
+    if (isModule) card.classList.add('module-card');
     card.innerHTML = `<strong>${upgrade.title}</strong><span>${upgrade.description}</span><em>${upgrade.price} очков</em>`;
     card.addEventListener('click', () => {
-      if (buyUpgrade(run, upgrade)) continueRun();
+      const bought = isModule ? buyModule(run, upgrade) : buyUpgrade(run, upgrade);
+      if (bought) {
+        if (!isModule) purchasedOffers.add(upgrade.id);
+        renderShop();
+      }
     });
     return card;
   }));
 }
 
-function openShop(targetId, side) {
+function openShop(targetId, side, mode = 'upgrade') {
+  shopMode = mode;
+  currentOffers = drawOffers();
+  purchasedOffers = new Set();
   pendingRoom = { targetId, side, previousPhase: state.phase };
   state.phase = 'shop';
   clearInput();
@@ -103,6 +121,8 @@ function openShop(targetId, side) {
 reroll.addEventListener('click', () => {
   if (run.score < ECONOMY.rerollCost) return;
   run.score -= ECONOMY.rerollCost;
+  currentOffers = drawOffers();
+  purchasedOffers = new Set();
   renderShop();
 });
 shopContinue.addEventListener('click', continueRun);
@@ -115,7 +135,10 @@ function frame(time) {
   for (const event of events) {
     if (event.type !== 'nextArena') continue;
     if (run.visited.has(event.targetId)) enterRoom(event.targetId, event.side);
-    else openShop(event.targetId, event.side);
+    else if (run.maze.rooms.get(event.targetId).type === 'merchant') {
+      enterRoom(event.targetId, event.side);
+      openShop(null, null, 'merchant');
+    } else openShop(event.targetId, event.side);
   }
   renderGame(state);
   renderMinimap(run);

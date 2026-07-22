@@ -17,7 +17,9 @@ export function createUi() {
       shield.value = state.player.shield;
       shield.max = state.run.stats.maxShield;
       score.textContent = `Очки: ${state.run.score}`;
-      armor.textContent = `Броня: ${state.player.armor.filter(Boolean).length}/${PLAYER.armorSides}`;
+      const cells = state.player.armor.reduce((sum, facet) => sum + facet.cells, 0);
+      const maxCells = state.player.armor.reduce((sum, facet) => sum + facet.maxCells, 0);
+      armor.textContent = `Броня: ${cells}/${maxCells}`;
       arena.textContent = String(state.arena).padStart(2, '0');
       restart.hidden = state.phase !== 'defeat' && state.phase !== 'victory';
       if (state.phase === 'capture') {
@@ -30,6 +32,9 @@ export function createUi() {
       } else if (state.phase === 'shop') {
         status.textContent = 'Магазин улучшений';
         message.textContent = '';
+      } else if (state.phase === 'merchant') {
+        status.textContent = 'Комната торговца';
+        message.textContent = 'ТОРГОВЕЦ МОДУЛЯМИ';
       } else if (state.phase === 'boss') {
         status.textContent = 'Комната босса';
         message.textContent = 'УНИЧТОЖЬТЕ СТРАЖА ЛАБИРИНТА';

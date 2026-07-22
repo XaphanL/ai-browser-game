@@ -28,7 +28,7 @@ function drawCapture(ctx, state) {
 
 function drawExits(ctx, state) {
   for (const exit of state.exits) {
-    const open = state.phase === 'escape';
+    const open = state.phase === 'escape' || state.phase === 'merchant';
     const rules = DIFFICULTIES[exit.difficulty];
     ctx.save();
     ctx.translate(exit.x, exit.y);
@@ -72,10 +72,11 @@ function drawArmor(ctx, player) {
   const step = Math.PI * 2 / PLAYER.armorSides;
   const vertexRadius = PLAYER.armorRadius / Math.cos(step / 2);
   for (let index = 0; index < PLAYER.armorSides; index++) {
-    if (!player.armor[index]) continue;
+    const facet = player.armor[index];
+    if (facet.cells <= 0) continue;
     const angle = index * step;
-    ctx.strokeStyle = '#72a7ff';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = facet.charge >= PLAYER.armorChargeHits ? '#ffd166' : '#72a7ff';
+    ctx.lineWidth = 3 + Math.min(3, facet.cells);
     ctx.beginPath();
     ctx.moveTo(Math.cos(angle - step / 2) * vertexRadius, Math.sin(angle - step / 2) * vertexRadius);
     ctx.lineTo(Math.cos(angle + step / 2) * vertexRadius, Math.sin(angle + step / 2) * vertexRadius);

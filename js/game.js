@@ -24,6 +24,50 @@ function updatePlayer(state, input, dt) {
   player.shield = clamp(player.shield + (player.shieldActive ? -state.run.stats.shieldDrain : state.run.stats.shieldRecharge) * dt, 0, state.run.stats.maxShield);
   player.hitFlash = Math.max(0, player.hitFlash - dt);
   player.reflectionFlash = Math.max(0, player.reflectionFlash - dt);
+  const abilityStarted = input.ability && !player.abilityPressed;
+  player.abilityPressed = input.ability;
+  if (abilityStarted) activateModule(state);
+}
+
+function chooseHomingTarget(state, assigned) {
+  const living = state.turrets.filter(turret => turret.health > 0);
+  const safe = living.filter(turret => (assigned.get(turret.id) || 0) < turret.health);
+  const pool = safe.length ? safe : living;
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function activateModule(state) {
+  const player = state.player;
+  if (state.run.module === 'dash') {
+    const facet = player.armor.find(item => item.cells > 0);
+    if (!facet) return;
+    facet.cells--;
+    const angle = inputAimAngle(player);
+    player.x = clamp(player.x + Math.cos(angle) * PLAYER.dashDistance, WORLD.margin, WORLD.width - WORLD.margin);
+    player.y = clamp(player.y + Math.sin(angle) * PLAYER.dashDistance, WORLD.margin, WORLD.height - WORLD.margin);
+    state.effects.push({ type: 'dash', x: player.x, y: player.y, life: .25, maxLife: .25 });
+  } else if (state.run.module === 'retaliation') {
+    const assigned = new Map();
+    for (const bullet of state.projectiles.filter(item => item.homing)) {
+      assigned.set(bullet.targetId, (assigned.get(bullet.targetId) || 0) + 1);
+    }
+    for (const facet of player.armor) {
+      if (facet.charge < PLAYER.armorChargeHits) continue;
+      const target = chooseHomingTarget(state, assigned);
+      if (!target) break;
+      facet.charge -= PLAYER.armorChargeHits;
+      assigned.set(target.id, (assigned.get(target.id) || 0) + 1);
+      state.projectiles.push({
+        id: state.nextProjectileId++, x: player.x, y: player.y, vx: 0, vy: 0,
+        radius: 5, reflected: true, homing: true, targetId: target.id, damage: 1, life: 7
+      });
+    }
+  }
+}
+
+function inputAimAngle(player) {
+  return player.aim;
 }
 
 function updateSwordAttack(state) {
@@ -35,6 +79,7 @@ function updateSwordAttack(state) {
     const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2;
     if (inArc && distance(player, turret) <= state.run.stats.swordRange + turret.radius) {
       turret.health -= state.run.stats.swordDamage;
+      turret.lastHit = 'sword';
       turret.flash = .12;
       player.attackHits.push(turret.id);
     }
@@ -47,7 +92,7 @@ function updateCapture(state, dt, events) {
   state.capture.progress = clamp(state.capture.progress + (inside ? dt : -dt * .45), 0, state.capture.required);
   if (state.capture.progress >= state.capture.required) {
     state.phase = 'escape';
-    state.player.armor.fill(true);
+    for (const facet of state.player.armor) facet.cells = facet.maxCells;
     events.push({ type: 'captured' });
   }
 }
@@ -93,12 +138,15 @@ function reflectProjectile(projectile, player) {
   return true;
 }
 
-function absorbWithArmor(projectile, player) {
+function absorbWithArmor(projectile, state) {
+  const player = state.player;
   const angle = normalizeAngle(Math.atan2(projectile.y - player.y, projectile.x - player.x));
   const step = Math.PI * 2 / PLAYER.armorSides;
   const facet = Math.round(angle / step + PLAYER.armorSides) % PLAYER.armorSides;
-  if (!player.armor[facet]) return false;
-  player.armor[facet] = false;
+  const armorFacet = player.armor[facet];
+  if (armorFacet.cells <= 0) return false;
+  armorFacet.cells--;
+  if (state.run.module === 'retaliation') armorFacet.charge++;
   player.hitFlash = .1;
   projectile.life = 0;
   return true;
@@ -106,13 +154,22 @@ function absorbWithArmor(projectile, player) {
 
 function updateProjectiles(state, dt, events) {
   for (const bullet of state.projectiles) {
+    if (bullet.homing) {
+      let target = state.turrets.find(turret => turret.id === bullet.targetId && turret.health > 0);
+      if (!target) target = chooseHomingTarget(state, new Map());
+      if (!target) { bullet.life = 0; continue; }
+      bullet.targetId = target.id;
+      const angle = Math.atan2(target.y - bullet.y, target.x - bullet.x);
+      bullet.vx = Math.cos(angle) * PLAYER.homingBulletSpeed;
+      bullet.vy = Math.sin(angle) * PLAYER.homingBulletSpeed;
+    }
     bullet.x += bullet.vx * dt;
     bullet.y += bullet.vy * dt;
     bullet.life -= dt;
     const playerCollisionRadius = state.player.shieldActive ? PLAYER.shieldRadius : PLAYER.armorRadius;
     if (!bullet.reflected && distance(bullet, state.player) < bullet.radius + playerCollisionRadius) {
       if (!reflectProjectile(bullet, state.player) && distance(bullet, state.player) < bullet.radius + PLAYER.armorRadius) {
-        if (!absorbWithArmor(bullet, state.player) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
+        if (!absorbWithArmor(bullet, state) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
           state.player.health -= bullet.damage * state.run.stats.damageTaken;
           state.player.hitFlash = .16;
           bullet.life = 0;
@@ -127,6 +184,7 @@ function updateProjectiles(state, dt, events) {
       for (const turret of state.turrets) {
         if (distance(bullet, turret) < bullet.radius + turret.radius) {
           turret.health--;
+          turret.lastHit = bullet.homing ? 'module' : 'reflection';
           turret.flash = .12;
           bullet.life = 0;
           break;
@@ -139,6 +197,11 @@ function updateProjectiles(state, dt, events) {
       const reward = turret.boss ? ECONOMY.bossReward : ECONOMY.turretReward;
       turret.rewarded = true;
       state.run.score += reward;
+      if (state.run.module === 'vampire') {
+        const damaged = state.player.armor.filter(facet => facet.cells < facet.maxCells);
+        if (damaged.length) damaged[Math.floor(Math.random() * damaged.length)].cells++;
+        if (turret.lastHit === 'sword') state.player.health = Math.min(state.run.stats.maxHealth, state.player.health + 8);
+      }
       events.push({ type: 'enemyKilled', reward });
     }
   }
@@ -162,7 +225,7 @@ function updateEffects(state, dt) {
 }
 
 function checkExits(state, events) {
-  if (state.phase !== 'escape') return;
+  if (state.phase !== 'escape' && state.phase !== 'merchant') return;
   for (const exit of state.exits) {
     if (Math.abs(state.player.x - exit.x) < exit.width / 2 && Math.abs(state.player.y - exit.y) < exit.height / 2) {
       events.push({ type: 'nextArena', difficulty: exit.difficulty, targetId: exit.targetId, side: exit.side });

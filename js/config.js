@@ -1,6 +1,6 @@
 export const WORLD = { width: 960, height: 600, margin: 34 };
 
-export const RUN = { mazeWidth: 3, mazeHeight: 3 };
+export const RUN = { mazeWidth: 5, mazeHeight: 5 };
 
 export const ECONOMY = { turretReward: 30, bossReward: 150, rerollCost: 20 };
 
@@ -21,6 +21,10 @@ export const PLAYER = {
   shieldRecharge: 15,
   armorRadius: 23,
   armorSides: 8,
+  armorCells: 1,
+  dashDistance: 150,
+  armorChargeHits: 3,
+  homingBulletSpeed: 330,
   swordDamage: 2,
   swordRange: 62,
   swordArc: Math.PI * .72,

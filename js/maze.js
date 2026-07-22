@@ -58,13 +58,18 @@ export function generateMaze(width = RUN.mazeWidth, height = RUN.mazeHeight) {
   }
   const boss = [...rooms.values()].sort((a, b) => b.distance - a.distance)[0];
   boss.type = 'boss';
+  const merchantCandidates = [...rooms.values()].filter(room =>
+    room.id !== startId && room.id !== boss.id && room.distance >= 3 && room.distance <= Math.max(4, boss.distance - 2)
+  );
+  const merchant = merchantCandidates.sort((a, b) => Math.abs(a.distance - boss.distance / 2) - Math.abs(b.distance - boss.distance / 2))[0];
+  if (merchant) merchant.type = 'merchant';
   for (const room of rooms.values()) {
     if (room.id === startId || room.type === 'boss') continue;
     const roll = Math.random();
     room.difficulty = room.distance <= 2 ? (roll < .55 ? 'easy' : 'normal') : (roll < .25 ? 'easy' : roll < .7 ? 'normal' : 'hard');
   }
   boss.difficulty = 'hard';
-  return { width, height, startId, bossId: boss.id, rooms };
+  return { width, height, startId, bossId: boss.id, merchantId: merchant?.id ?? null, rooms };
 }
 
 export function markTransition(run, fromId, toId) {

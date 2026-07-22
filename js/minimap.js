@@ -27,7 +27,7 @@ export function createMinimap(canvas) {
       if (!visited.has(room.id)) continue;
       const point = center(room);
       ctx.beginPath(); ctx.arc(point.x, point.y, room.type === 'boss' ? 8 : 6, 0, Math.PI * 2);
-      ctx.fillStyle = room.id === currentRoomId ? '#ffffff' : (room.type === 'boss' ? '#bd83ff' : '#61f6d2');
+      ctx.fillStyle = room.id === currentRoomId ? '#ffffff' : (room.type === 'boss' ? '#bd83ff' : (room.type === 'merchant' ? '#ffd166' : '#61f6d2'));
       ctx.fill();
       if (room.id === currentRoomId) {
         ctx.strokeStyle = '#61f6d2'; ctx.lineWidth = 3; ctx.stroke();

@@ -17,7 +17,7 @@ body {
 button { font: inherit; }
 
 .game-shell {
-  width: min(100%, 1100px);
+  width: min(100%, 1260px);
   min-height: 100vh;
   margin: 0 auto;
   padding: 16px;
@@ -25,6 +25,8 @@ button { font: inherit; }
   align-content: center;
   gap: 12px;
 }
+
+.game-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px; align-items: stretch; }
 
 .hud, .help {
   display: flex;
@@ -36,13 +38,14 @@ button { font: inherit; }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
+.hud { padding: 16px; border: 1px solid #314263; border-radius: 10px; background: #0b1020; flex-direction: column; align-items: stretch; justify-content: flex-start; }
 
 .brand { color: #61f6d2; font-weight: 800; }
-.meter-group { display: flex; gap: 16px; }
-.meter-group label { display: grid; grid-template-columns: auto 110px; align-items: center; gap: 8px; }
+.meter-group { display: grid; gap: 14px; }
+.meter-group label { display: grid; gap: 6px; }
 progress { width: 110px; height: 9px; accent-color: #61f6d2; }
 #health { accent-color: #ff5d7a; }
-.status { min-width: 230px; text-align: right; color: #d8e7f5; }
+.status { color: #d8e7f5; }
 
 .viewport {
   position: relative;
@@ -56,10 +59,8 @@ progress { width: 110px; height: 9px; accent-color: #61f6d2; }
 canvas { display: block; width: 100%; height: auto; touch-action: none; }
 
 .minimap-panel {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: clamp(104px, 19vw, 180px);
+  width: 100%;
+  margin-top: auto;
   padding: 7px;
   border: 1px solid #314263;
   border-radius: 7px;
@@ -116,6 +117,8 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
 .upgrade-card strong { margin-bottom: 12px; color: #fff; font-size: 18px; }
 .upgrade-card span { color: #9eb3c8; line-height: 1.5; }
 .upgrade-card em { display: block; margin-top: 20px; color: #ffd166; font-style: normal; }
+.module-card { border-color: #72549c; background: #171329; }
+.module-card strong { color: #d9b8ff; }
 .shop-actions { margin-top: 20px; }
 .shop-actions button { padding: 11px 16px; border: 1px solid #415b79; border-radius: 4px; background: #14243a; color: #dcecff; cursor: pointer; }
 .shop-actions button:disabled { opacity: .4; cursor: not-allowed; }
@@ -123,20 +126,22 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
 .help { justify-content: center; flex-wrap: wrap; }
 .mobile-controls { display: none; justify-content: space-between; align-items: center; padding: 0 8px; }
 .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 5px; }
-.dpad button, .shield-button, .attack-button { border: 1px solid #415b79; background: #111a2cdd; color: #bcd0e3; touch-action: none; }
+.dpad button, .shield-button, .attack-button, .ability-button { border: 1px solid #415b79; background: #111a2cdd; color: #bcd0e3; touch-action: none; }
 .dpad [data-direction="up"] { grid-column: 2; }
 .dpad [data-direction="left"] { grid-column: 1; }
 .dpad [data-direction="down"] { grid-column: 2; }
 .dpad [data-direction="right"] { grid-column: 3; }
 .action-buttons { display: flex; gap: 8px; align-items: center; }
-.shield-button, .attack-button { width: 62px; height: 62px; border-radius: 50%; font-size: 11px; }
+.shield-button, .attack-button, .ability-button { width: 62px; height: 62px; border-radius: 50%; font-size: 10px; }
+.ability-button { color: #bd83ff; }
 .shield-button { color: #61f6d2; }
 .attack-button { color: #ffe08a; }
 .dpad button:active, .shield-button:active, .attack-button:active { background: #21435d; }
 
 @media (hover: none), (max-width: 700px) {
   .game-shell { padding: 8px; align-content: start; }
-  .hud { display: grid; grid-template-columns: 1fr auto; }
+  .game-layout { grid-template-columns: 1fr; }
+  .hud { display: grid; grid-template-columns: 1fr auto; padding: 10px; }
   .meter-group { grid-column: 1 / -1; grid-row: 2; }
   .meter-group label { grid-template-columns: auto min(24vw, 110px); }
   .status { min-width: 0; font-size: 10px; }
@@ -145,5 +150,5 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   .shop-cards { grid-template-columns: 1fr; }
   .upgrade-card { min-height: 0; }
   .shop-actions { align-items: stretch; flex-direction: column; }
-  .minimap-panel { top: 8px; right: 8px; }
+  .minimap-panel { grid-column: 1 / -1; width: 110px; margin: 0; justify-self: end; }
 }

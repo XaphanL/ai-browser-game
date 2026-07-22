@@ -14,6 +14,12 @@ export const UPGRADES = [
   { id: 'efficiency', title: 'Экономичный барьер', description: '-15% к расходу щита', price: 85, apply: stats => { stats.shieldDrain *= .85; } }
 ];
 
+export const MODULES = [
+  { id: 'retaliation', title: 'Модуль «Возмездие»', description: 'Каждая грань копит заряд от попаданий. Способность выпускает самонаводящуюся пулю за каждые 3 заряда.', price: 180 },
+  { id: 'dash', title: 'Модуль «Импульс»', description: 'Способность делает рывок к курсору, расходуя одну энергетическую ячейку ближайшей целой грани.', price: 180 },
+  { id: 'vampire', title: 'Модуль «Вампиризм»', description: 'Убийства восстанавливают ячейку брони, а убийства мечом дополнительно ремонтируют корпус.', price: 180 }
+];
+
 export function createRunState() {
   const maze = generateMaze();
   return {
@@ -24,6 +30,7 @@ export function createRunState() {
     traversed: new Set(),
     roomStates: new Map(),
     upgrades: [],
+    module: null,
     stats: {
       maxHealth: PLAYER.maxHealth,
       damageTaken: 1,
@@ -53,5 +60,12 @@ export function buyUpgrade(run, upgrade) {
   run.score -= upgrade.price;
   upgrade.apply(run.stats);
   run.upgrades.push(upgrade.id);
+  return true;
+}
+
+export function buyModule(run, module) {
+  if (run.score < module.price || run.module === module.id) return false;
+  run.score -= module.price;
+  run.module = module.id;
   return true;
 }

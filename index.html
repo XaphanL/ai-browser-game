@@ -9,7 +9,8 @@
 </head>
 <body>
   <main class="game-shell">
-    <header class="hud" aria-label="Состояние игрока">
+    <div class="game-layout">
+    <aside class="hud" aria-label="Состояние игрока">
       <div class="brand">ROOM // <span id="arena-number">01</span></div>
       <div class="meter-group">
         <label>Корпус <progress id="health" max="100" value="100"></progress></label>
@@ -18,19 +19,19 @@
         <span id="score">Очки: 0</span>
       </div>
       <div id="status" class="status">Найдите точку захвата</div>
-    </header>
+      <div class="minimap-panel" aria-label="Пройденный путь">
+        <span>МАРШРУТ</span>
+        <canvas id="minimap" width="220" height="220"></canvas>
+      </div>
+    </aside>
 
     <section class="viewport" aria-label="Игровая арена">
       <canvas id="game" width="960" height="600"></canvas>
-      <aside class="minimap-panel" aria-label="Пройденный путь">
-        <span>МАРШРУТ</span>
-        <canvas id="minimap" width="180" height="180"></canvas>
-      </aside>
       <div id="message" class="message" aria-live="polite"></div>
       <button id="restart" class="restart" type="button" hidden>Новый забег</button>
       <section id="shop" class="shop" aria-label="Магазин улучшений" hidden>
         <div class="shop-header">
-          <div><span class="shop-kicker">МЕЖДУ АРЕНАМИ</span><h2>Магазин улучшений</h2></div>
+          <div><span id="shop-kicker" class="shop-kicker">МЕЖДУ АРЕНАМИ</span><h2 id="shop-title">Магазин улучшений</h2></div>
           <strong id="shop-score">0 очков</strong>
         </div>
         <div id="shop-cards" class="shop-cards"></div>
@@ -40,6 +41,7 @@
         </div>
       </section>
     </section>
+    </div>
 
     <section class="mobile-controls" aria-label="Сенсорное управление">
       <div class="dpad">
@@ -49,6 +51,7 @@
         <button data-direction="right" aria-label="Вправо">▶</button>
       </div>
       <div class="action-buttons">
+        <button id="ability-button" class="ability-button" type="button">МОДУЛЬ</button>
         <button id="attack-button" class="attack-button" type="button">МЕЧ</button>
         <button id="shield-button" class="shield-button" type="button">ЩИТ</button>
       </div>
@@ -59,6 +62,7 @@
       <span>Мышь — направление взгляда</span>
       <span>F / ЛКМ — удар мечом</span>
       <span>Пробел / ПКМ — активировать щит</span>
+      <span>E — способность модуля</span>
     </footer>
   </main>
   <script type="module" src="js/main.js"></script>

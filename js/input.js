@@ -1,19 +1,21 @@
 export function createInput(canvas) {
-  const input = { keys: new Set(), shield: false, attack: false, aimX: null, aimY: null };
-  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyF']);
+  const input = { keys: new Set(), shield: false, attack: false, ability: false, aimX: null, aimY: null };
+  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyF', 'KeyE']);
 
   addEventListener('keydown', event => {
     if (movementKeys.has(event.code)) event.preventDefault();
     input.keys.add(event.code);
     if (event.code === 'Space') input.shield = true;
     if (event.code === 'KeyF') input.attack = true;
+    if (event.code === 'KeyE') input.ability = true;
   });
   addEventListener('keyup', event => {
     input.keys.delete(event.code);
     if (event.code === 'Space') input.shield = false;
     if (event.code === 'KeyF') input.attack = false;
+    if (event.code === 'KeyE') input.ability = false;
   });
-  addEventListener('blur', () => { input.keys.clear(); input.shield = false; input.attack = false; });
+  addEventListener('blur', () => { input.keys.clear(); input.shield = false; input.attack = false; input.ability = false; });
 
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect();
@@ -51,6 +53,11 @@ export function createInput(canvas) {
   attackButton.addEventListener('pointerdown', setAttack(true));
   attackButton.addEventListener('pointerup', setAttack(false));
   attackButton.addEventListener('pointercancel', setAttack(false));
+  const abilityButton = document.querySelector('#ability-button');
+  const setAbility = value => event => { event.preventDefault(); input.ability = value; };
+  abilityButton.addEventListener('pointerdown', setAbility(true));
+  abilityButton.addEventListener('pointerup', setAbility(false));
+  abilityButton.addEventListener('pointercancel', setAbility(false));
   return input;
 }
 
