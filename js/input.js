@@ -1,17 +1,19 @@
 export function createInput(canvas) {
-  const input = { keys: new Set(), shield: false, aimX: null, aimY: null };
-  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space']);
+  const input = { keys: new Set(), shield: false, attack: false, aimX: null, aimY: null };
+  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyF']);
 
   addEventListener('keydown', event => {
     if (movementKeys.has(event.code)) event.preventDefault();
     input.keys.add(event.code);
     if (event.code === 'Space') input.shield = true;
+    if (event.code === 'KeyF') input.attack = true;
   });
   addEventListener('keyup', event => {
     input.keys.delete(event.code);
     if (event.code === 'Space') input.shield = false;
+    if (event.code === 'KeyF') input.attack = false;
   });
-  addEventListener('blur', () => { input.keys.clear(); input.shield = false; });
+  addEventListener('blur', () => { input.keys.clear(); input.shield = false; input.attack = false; });
 
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect();
@@ -19,8 +21,14 @@ export function createInput(canvas) {
     input.aimY = (event.clientY - rect.top) * canvas.height / rect.height;
   });
   canvas.addEventListener('contextmenu', event => event.preventDefault());
-  canvas.addEventListener('pointerdown', event => { if (event.button === 2) input.shield = true; });
-  addEventListener('pointerup', event => { if (event.button === 2) input.shield = false; });
+  canvas.addEventListener('pointerdown', event => {
+    if (event.button === 0) input.attack = true;
+    if (event.button === 2) input.shield = true;
+  });
+  addEventListener('pointerup', event => {
+    if (event.button === 0) input.attack = false;
+    if (event.button === 2) input.shield = false;
+  });
 
   document.querySelectorAll('[data-direction]').forEach(button => {
     const code = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[button.dataset.direction];
@@ -37,6 +45,12 @@ export function createInput(canvas) {
   shieldButton.addEventListener('pointerdown', setShield(true));
   shieldButton.addEventListener('pointerup', setShield(false));
   shieldButton.addEventListener('pointercancel', setShield(false));
+
+  const attackButton = document.querySelector('#attack-button');
+  const setAttack = value => event => { event.preventDefault(); input.attack = value; };
+  attackButton.addEventListener('pointerdown', setAttack(true));
+  attackButton.addEventListener('pointerup', setAttack(false));
+  attackButton.addEventListener('pointercancel', setAttack(false));
   return input;
 }
 

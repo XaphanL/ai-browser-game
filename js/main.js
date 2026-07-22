@@ -15,6 +15,7 @@ function reset(arena = 1, difficulty = 'easy') {
   state = createGameState(arena, difficulty);
   input.keys.clear();
   input.shield = false;
+  input.attack = false;
 }
 
 ui.restart.addEventListener('click', () => reset());

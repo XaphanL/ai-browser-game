@@ -85,13 +85,16 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
 .help { justify-content: center; flex-wrap: wrap; }
 .mobile-controls { display: none; justify-content: space-between; align-items: center; padding: 0 8px; }
 .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 5px; }
-.dpad button, .shield-button { border: 1px solid #415b79; background: #111a2cdd; color: #bcd0e3; touch-action: none; }
+.dpad button, .shield-button, .attack-button { border: 1px solid #415b79; background: #111a2cdd; color: #bcd0e3; touch-action: none; }
 .dpad [data-direction="up"] { grid-column: 2; }
 .dpad [data-direction="left"] { grid-column: 1; }
 .dpad [data-direction="down"] { grid-column: 2; }
 .dpad [data-direction="right"] { grid-column: 3; }
-.shield-button { width: 82px; height: 82px; border-radius: 50%; color: #61f6d2; }
-.dpad button:active, .shield-button:active { background: #21435d; }
+.action-buttons { display: flex; gap: 8px; align-items: center; }
+.shield-button, .attack-button { width: 62px; height: 62px; border-radius: 50%; font-size: 11px; }
+.shield-button { color: #61f6d2; }
+.attack-button { color: #ffe08a; }
+.dpad button:active, .shield-button:active, .attack-button:active { background: #21435d; }
 
 @media (hover: none), (max-width: 700px) {
   .game-shell { padding: 8px; align-content: start; }

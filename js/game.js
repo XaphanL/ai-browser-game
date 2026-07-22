@@ -13,9 +13,32 @@ function updatePlayer(state, input, dt) {
   if (input.aimX !== null) player.aim = Math.atan2(input.aimY - player.y, input.aimX - player.x);
   else if (movement.moving) player.aim = Math.atan2(movement.y, movement.x);
 
-  player.shieldActive = input.shield && player.shield > 0;
+  player.attackTimer = Math.max(0, player.attackTimer - dt);
+  player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+  if (input.attack && !input.shield && player.attackTimer <= 0 && player.attackCooldown <= 0) {
+    player.attackTimer = PLAYER.swordAttackSeconds;
+    player.attackCooldown = PLAYER.swordAttackSeconds + PLAYER.swordCooldownSeconds;
+    player.attackHits.length = 0;
+  }
+  player.shieldActive = input.shield && player.shield > 0 && player.attackTimer <= 0;
   player.shield = clamp(player.shield + (player.shieldActive ? -PLAYER.shieldDrain : PLAYER.shieldRecharge) * dt, 0, PLAYER.maxShield);
   player.hitFlash = Math.max(0, player.hitFlash - dt);
+  player.reflectionFlash = Math.max(0, player.reflectionFlash - dt);
+}
+
+function updateSwordAttack(state) {
+  const player = state.player;
+  if (player.attackTimer <= 0) return;
+  for (const turret of state.turrets) {
+    if (player.attackHits.includes(turret.id)) continue;
+    const angle = Math.atan2(turret.y - player.y, turret.x - player.x);
+    const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= PLAYER.swordArc / 2;
+    if (inArc && distance(player, turret) <= PLAYER.swordRange + turret.radius) {
+      turret.health -= PLAYER.swordDamage;
+      turret.flash = .12;
+      player.attackHits.push(turret.id);
+    }
+  }
 }
 
 function updateCapture(state, dt, events) {
@@ -41,6 +64,7 @@ function fire(turret, state, rules) {
 function updateTurrets(state, dt) {
   const rules = DIFFICULTIES[state.difficulty];
   for (const turret of state.turrets) {
+    if (turret.health <= 0) continue;
     turret.flash = Math.max(0, turret.flash - dt);
     turret.cooldown -= dt;
     if (turret.cooldown <= 0 && distance(turret, state.player) < 620) {
@@ -64,6 +88,8 @@ function reflectProjectile(projectile, player) {
   projectile.x = player.x + normalX * (PLAYER.shieldRadius + projectile.radius + 1);
   projectile.y = player.y + normalY * (PLAYER.shieldRadius + projectile.radius + 1);
   player.shield = Math.max(0, player.shield - 9);
+  player.reflectionFlash = .18;
+  projectile.reflectionEffect = { x: projectile.x, y: projectile.y };
   return true;
 }
 
@@ -92,6 +118,10 @@ function updateProjectiles(state, dt, events) {
           bullet.life = 0;
         }
       }
+      if (bullet.reflectionEffect) {
+        state.effects.push({ type: 'reflection', ...bullet.reflectionEffect, life: .28, maxLife: .28 });
+        delete bullet.reflectionEffect;
+      }
     }
     if (bullet.reflected) {
       for (const turret of state.turrets) {
@@ -118,6 +148,11 @@ function updateProjectiles(state, dt, events) {
   }
 }
 
+function updateEffects(state, dt) {
+  for (const effect of state.effects) effect.life -= dt;
+  state.effects = state.effects.filter(effect => effect.life > 0);
+}
+
 function checkExits(state, events) {
   if (state.phase !== 'escape') return;
   for (const exit of state.exits) {
@@ -133,9 +168,11 @@ export function updateGame(state, input, dt) {
   if (state.phase === 'defeat' || state.phase === 'victory') return events;
   state.elapsed += dt;
   updatePlayer(state, input, dt);
+  updateSwordAttack(state);
   if (state.capture) updateCapture(state, dt, events);
   updateTurrets(state, dt);
   updateProjectiles(state, dt, events);
+  updateEffects(state, dt);
   checkExits(state, events);
   return events;
 }

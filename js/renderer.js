@@ -88,11 +88,35 @@ function drawPlayer(ctx, player) {
   ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   drawArmor(ctx, player);
   ctx.rotate(player.aim); ctx.fillStyle = '#61f6d2'; ctx.fillRect(5, -3, 19, 6);
+  if (player.attackTimer > 0) {
+    const progress = 1 - player.attackTimer / PLAYER.swordAttackSeconds;
+    const swordAngle = -PLAYER.swordArc / 2 + PLAYER.swordArc * progress;
+    ctx.save(); ctx.rotate(swordAngle);
+    ctx.strokeStyle = '#fff1a6'; ctx.shadowBlur = 16; ctx.shadowColor = '#ffd166'; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(PLAYER.swordRange, 0); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = '#ffd16688'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, PLAYER.swordRange, -PLAYER.swordArc / 2, swordAngle); ctx.stroke();
+  }
   if (player.shieldActive) {
-    ctx.strokeStyle = '#6cfbe1'; ctx.shadowBlur = 18; ctx.shadowColor = '#61f6d2'; ctx.lineWidth = 6;
+    ctx.strokeStyle = player.reflectionFlash ? '#ffffff' : '#6cfbe1';
+    ctx.shadowBlur = player.reflectionFlash ? 30 : 18; ctx.shadowColor = '#61f6d2'; ctx.lineWidth = player.reflectionFlash ? 9 : 6;
     ctx.beginPath(); ctx.arc(0, 0, PLAYER.shieldRadius, -PLAYER.shieldArc / 2, PLAYER.shieldArc / 2); ctx.stroke();
+    ctx.fillStyle = '#dffff8';
+    for (const angle of [-PLAYER.shieldArc / 2, 0, PLAYER.shieldArc / 2]) {
+      ctx.beginPath(); ctx.arc(Math.cos(angle) * PLAYER.shieldRadius, Math.sin(angle) * PLAYER.shieldRadius, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
   }
   ctx.restore();
+}
+
+function drawEffects(ctx, effects) {
+  for (const effect of effects) {
+    const progress = 1 - effect.life / effect.maxLife;
+    ctx.strokeStyle = `rgba(176, 255, 241, ${1 - progress})`;
+    ctx.lineWidth = 5 * (1 - progress);
+    ctx.beginPath(); ctx.arc(effect.x, effect.y, 8 + progress * 28, 0, Math.PI * 2); ctx.stroke();
+  }
 }
 
 export function createRenderer(canvas) {
@@ -103,9 +127,16 @@ export function createRenderer(canvas) {
     drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
-      ctx.shadowBlur = 12; ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;
+      if (bullet.reflected) {
+        const speed = Math.hypot(bullet.vx, bullet.vy) || 1;
+        ctx.strokeStyle = '#61f6d288'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(bullet.x, bullet.y);
+        ctx.lineTo(bullet.x - bullet.vx / speed * 28, bullet.y - bullet.vy / speed * 28); ctx.stroke();
+      }
       ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     }
+    drawEffects(ctx, state.effects);
     drawPlayer(ctx, state.player);
     if (state.phase === 'defeat' || state.phase === 'victory') { ctx.fillStyle = '#080b16b8'; ctx.fillRect(0, 0, WORLD.width, WORLD.height); }
   };

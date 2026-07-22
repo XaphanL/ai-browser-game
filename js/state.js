@@ -30,6 +30,10 @@ export function createGameState(arena = 1, difficulty = 'easy') {
       shieldActive: false,
       aim: -Math.PI / 2,
       hitFlash: 0,
+      attackTimer: 0,
+      attackCooldown: 0,
+      attackHits: [],
+      reflectionFlash: 0,
       armor: Array(PLAYER.armorSides).fill(true)
     },
     capture: isBossRoom ? null : { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds },
@@ -38,6 +42,7 @@ export function createGameState(arena = 1, difficulty = 'easy') {
       health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
     }] : makeTurrets(rules.turrets),
     projectiles: [],
+    effects: [],
     exits: isBossRoom ? [] : [
       { side: 'left', x: 25, y: 300, width: 50, height: 120, difficulty: 'easy' },
       { side: 'top', x: 480, y: 25, width: 150, height: 50, difficulty: 'normal' },

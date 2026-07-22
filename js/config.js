@@ -18,7 +18,12 @@ export const PLAYER = {
   shieldDrain: 24,
   shieldRecharge: 15,
   armorRadius: 23,
-  armorSides: 8
+  armorSides: 8,
+  swordDamage: 2,
+  swordRange: 62,
+  swordArc: Math.PI * .72,
+  swordAttackSeconds: .3,
+  swordCooldownSeconds: .18
 };
 
 export const BOSS = {
