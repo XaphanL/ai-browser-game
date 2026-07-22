@@ -165,7 +165,7 @@ function checkExits(state, events) {
   if (state.phase !== 'escape') return;
   for (const exit of state.exits) {
     if (Math.abs(state.player.x - exit.x) < exit.width / 2 && Math.abs(state.player.y - exit.y) < exit.height / 2) {
-      events.push({ type: 'nextArena', difficulty: exit.difficulty });
+      events.push({ type: 'nextArena', difficulty: exit.difficulty, targetId: exit.targetId, side: exit.side });
       return;
     }
   }

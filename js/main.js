@@ -5,33 +5,75 @@ import { createRenderer } from './renderer.js';
 import { createUi } from './ui.js';
 import { ECONOMY } from './config.js';
 import { buyUpgrade, createRunState, drawOffers } from './upgrades.js';
+import { markTransition } from './maze.js';
+import { createMinimap } from './minimap.js';
 
 const canvas = document.querySelector('#game');
 const input = createInput(canvas);
 const renderGame = createRenderer(canvas);
+const renderMinimap = createMinimap(document.querySelector('#minimap'));
 const ui = createUi();
 let run = createRunState();
-let state = createGameState(1, 'easy', run);
+let state = createGameState(run.maze.rooms.get(run.currentRoomId), run);
+run.roomStates.set(run.currentRoomId, state);
 let previousTime = performance.now();
-let pendingArena = null;
+let pendingRoom = null;
 const shop = document.querySelector('#shop');
 const shopCards = document.querySelector('#shop-cards');
 const shopScore = document.querySelector('#shop-score');
 const reroll = document.querySelector('#reroll');
 const shopContinue = document.querySelector('#shop-continue');
 
-function reset(arena = 1, difficulty = 'easy', newRun = false) {
-  if (newRun) run = createRunState();
-  state = createGameState(arena, difficulty, run);
+function clearInput() {
   input.keys.clear();
   input.shield = false;
   input.attack = false;
 }
 
+function playerSnapshot(player) {
+  return {
+    health: player.health,
+    shield: player.shield,
+    armor: [...player.armor],
+    aim: player.aim
+  };
+}
+
+function placeAtEntrance(player, exitSide) {
+  const positions = {
+    left: { x: 880, y: 300, aim: Math.PI },
+    right: { x: 80, y: 300, aim: 0 },
+    top: { x: 480, y: 520, aim: -Math.PI / 2 },
+    bottom: { x: 480, y: 80, aim: Math.PI / 2 }
+  };
+  Object.assign(player, positions[exitSide]);
+}
+
+function enterRoom(targetId, exitSide) {
+  const snapshot = playerSnapshot(state.player);
+  const target = run.maze.rooms.get(targetId);
+  state = run.roomStates.get(targetId) || createGameState(target, run);
+  run.roomStates.set(targetId, state);
+  Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0 });
+  placeAtEntrance(state.player, exitSide);
+  markTransition(run, run.currentRoomId, targetId);
+  clearInput();
+}
+
+function reset() {
+  run = createRunState();
+  state = createGameState(run.maze.rooms.get(run.currentRoomId), run);
+  run.roomStates.set(run.currentRoomId, state);
+  pendingRoom = null;
+  shop.hidden = true;
+  clearInput();
+}
+
 function continueRun() {
   shop.hidden = true;
-  reset(pendingArena.arena, pendingArena.difficulty);
-  pendingArena = null;
+  state.phase = pendingRoom.previousPhase;
+  enterRoom(pendingRoom.targetId, pendingRoom.side);
+  pendingRoom = null;
 }
 
 function renderShop() {
@@ -50,10 +92,10 @@ function renderShop() {
   }));
 }
 
-function openShop(arena, difficulty) {
-  pendingArena = { arena, difficulty };
+function openShop(targetId, side) {
+  pendingRoom = { targetId, side, previousPhase: state.phase };
   state.phase = 'shop';
-  input.keys.clear(); input.shield = false; input.attack = false;
+  clearInput();
   renderShop();
   shop.hidden = false;
 }
@@ -64,16 +106,19 @@ reroll.addEventListener('click', () => {
   renderShop();
 });
 shopContinue.addEventListener('click', continueRun);
-ui.restart.addEventListener('click', () => reset(1, 'easy', true));
+ui.restart.addEventListener('click', reset);
 
 function frame(time) {
   const dt = Math.min((time - previousTime) / 1000, .033);
   previousTime = time;
   const events = updateGame(state, input, dt);
   for (const event of events) {
-    if (event.type === 'nextArena') openShop(state.arena + 1, event.difficulty);
+    if (event.type !== 'nextArena') continue;
+    if (run.visited.has(event.targetId)) enterRoom(event.targetId, event.side);
+    else openShop(event.targetId, event.side);
   }
   renderGame(state);
+  renderMinimap(run);
   ui.render(state);
   requestAnimationFrame(frame);
 }

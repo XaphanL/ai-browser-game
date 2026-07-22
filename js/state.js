@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, PLAYER, RUN, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, PLAYER, WORLD } from './config.js';
 
 const turretPositions = [
   [150, 140], [810, 145], [150, 455], [810, 455], [480, 105], [480, 495]
@@ -12,11 +12,20 @@ function makeTurrets(count) {
   });
 }
 
-export function createGameState(arena = 1, difficulty = 'easy', run) {
+const EXIT_GEOMETRY = {
+  left: { x: 25, y: 300, width: 50, height: 120 },
+  top: { x: 480, y: 25, width: 150, height: 50 },
+  right: { x: 935, y: 300, width: 50, height: 120 },
+  bottom: { x: 480, y: 575, width: 150, height: 50 }
+};
+
+export function createGameState(room, run) {
+  const difficulty = room.difficulty;
   const rules = DIFFICULTIES[difficulty];
-  const isBossRoom = arena > RUN.arenaRooms;
+  const isBossRoom = room.type === 'boss';
   return {
-    arena,
+    arena: room.distance + 1,
+    roomId: room.id,
     difficulty,
     roomType: isBossRoom ? 'boss' : 'arena',
     phase: isBossRoom ? 'boss' : 'capture',
@@ -43,11 +52,9 @@ export function createGameState(arena = 1, difficulty = 'easy', run) {
     }] : makeTurrets(rules.turrets),
     projectiles: [],
     effects: [],
-    exits: isBossRoom ? [] : [
-      { side: 'left', x: 25, y: 300, width: 50, height: 120, difficulty: 'easy' },
-      { side: 'top', x: 480, y: 25, width: 150, height: 50, difficulty: 'normal' },
-      { side: 'right', x: 935, y: 300, width: 50, height: 120, difficulty: 'hard' }
-    ],
+    exits: isBossRoom ? [] : Object.entries(room.neighbors).map(([side, targetId]) => ({
+      side, targetId, difficulty: run.maze.rooms.get(targetId).difficulty, ...EXIT_GEOMETRY[side]
+    })),
     nextProjectileId: 1,
     run
   };

@@ -39,9 +39,11 @@ function drawExits(ctx, state) {
     ctx.strokeRect(-exit.width / 2, -exit.height / 2, exit.width, exit.height);
     ctx.fillStyle = open ? rules.color : '#526176';
     ctx.font = '700 13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (exit.side === 'left') { ctx.rotate(Math.PI / 2); ctx.fillText(rules.label.toUpperCase(), 0, -37); }
-    else if (exit.side === 'right') { ctx.rotate(-Math.PI / 2); ctx.fillText(rules.label.toUpperCase(), 0, -37); }
-    else ctx.fillText(rules.label.toUpperCase(), 0, 40);
+    const label = state.run.visited.has(exit.targetId) ? 'ПРОЙДЕНО' : rules.label.toUpperCase();
+    if (exit.side === 'left') { ctx.rotate(Math.PI / 2); ctx.fillText(label, 0, -37); }
+    else if (exit.side === 'right') { ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, -37); }
+    else if (exit.side === 'bottom') ctx.fillText(label, 0, -40);
+    else ctx.fillText(label, 0, 40);
     ctx.restore();
   }
 }

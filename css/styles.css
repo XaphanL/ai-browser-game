@@ -55,6 +55,20 @@ progress { width: 110px; height: 9px; accent-color: #61f6d2; }
 
 canvas { display: block; width: 100%; height: auto; touch-action: none; }
 
+.minimap-panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: clamp(104px, 19vw, 180px);
+  padding: 7px;
+  border: 1px solid #314263;
+  border-radius: 7px;
+  background: #080b16dd;
+  pointer-events: none;
+}
+.minimap-panel span { display: block; margin: 0 0 4px 4px; color: #8fa7bd; font-size: 9px; letter-spacing: .16em; }
+.minimap-panel canvas { width: 100%; }
+
 .message, .restart {
   position: absolute;
   left: 50%;
@@ -131,4 +145,5 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   .shop-cards { grid-template-columns: 1fr; }
   .upgrade-card { min-height: 0; }
   .shop-actions { align-items: stretch; flex-direction: column; }
+  .minimap-panel { top: 8px; right: 8px; }
 }

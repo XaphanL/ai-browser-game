@@ -1,4 +1,5 @@
 import { PLAYER } from './config.js';
+import { generateMaze } from './maze.js';
 
 export const UPGRADES = [
   { id: 'hull', title: 'Усиленный корпус', description: '+20 к максимуму прочности', price: 80, apply: stats => { stats.maxHealth += 20; } },
@@ -14,8 +15,14 @@ export const UPGRADES = [
 ];
 
 export function createRunState() {
+  const maze = generateMaze();
   return {
     score: 0,
+    maze,
+    currentRoomId: maze.startId,
+    visited: new Set([maze.startId]),
+    traversed: new Set(),
+    roomStates: new Map(),
     upgrades: [],
     stats: {
       maxHealth: PLAYER.maxHealth,

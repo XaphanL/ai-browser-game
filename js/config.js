@@ -1,6 +1,6 @@
 export const WORLD = { width: 960, height: 600, margin: 34 };
 
-export const RUN = { arenaRooms: 4 };
+export const RUN = { mazeWidth: 3, mazeHeight: 3 };
 
 export const ECONOMY = { turretReward: 30, bossReward: 150, rerollCost: 20 };
 
