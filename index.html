@@ -3,63 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#161b22">
-  <title>Передвижной завод</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <title>Codex работает!</title>
+  <style>
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      place-items: center;
+      font-family: sans-serif;
+    }
+  </style>
 </head>
 <body>
-  <main class="game-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Передвижной завод</p>
-        <h1>Маршрут к конечной точке</h1>
-      </div>
-      <button class="button button--quiet" id="restart-button" type="button">Начать заново</button>
-    </header>
-
-    <section class="resource-grid" aria-label="Ресурсы завода">
-      <article class="resource-card"><span>Топливо</span><strong id="fuel-value"></strong><div class="meter"><i id="fuel-meter"></i></div></article>
-      <article class="resource-card"><span>Сырьё</span><strong id="ore-value"></strong><div class="meter"><i id="ore-meter"></i></div></article>
-      <article class="resource-card"><span>Детали</span><strong id="parts-value"></strong><div class="meter"><i id="parts-meter"></i></div></article>
-      <article class="resource-card"><span>Свободно</span><strong id="space-value"></strong><small>на общем складе</small></article>
-    </section>
-
-    <section class="dashboard">
-      <div class="main-column">
-        <article class="panel route-panel">
-          <div class="section-heading">
-            <div><p class="eyebrow">Маршрут</p><h2 id="location-name"></h2></div>
-            <span class="step" id="route-step"></span>
-          </div>
-          <div class="deposit"><span>Запас месторождения</span><strong id="deposit-value"></strong></div>
-          <div class="route-map" id="route-options" aria-label="Следующие точки"></div>
-        </article>
-
-        <article class="panel actions-panel">
-          <div class="section-heading"><div><p class="eyebrow">Текущая точка</p><h2>Добыча и производство</h2></div></div>
-          <div class="action-grid">
-            <button class="action-card" id="mine-button" type="button"><strong>Добывать</strong><span id="mine-description"></span></button>
-            <button class="action-card" id="produce-button" type="button"><strong>Производить</strong><span id="produce-description"></span></button>
-          </div>
-          <p class="notice" id="notice" role="status" aria-live="polite"></p>
-        </article>
-      </div>
-
-      <aside class="panel factory-panel">
-        <div class="section-heading"><div><p class="eyebrow">Завод</p><h2>Установленные модули</h2></div></div>
-        <div class="factory-visual" aria-hidden="true">
-          <div class="factory-cab">01</div><div class="factory-core">CORE</div><div class="factory-slot" id="factory-slots"></div>
-          <div class="wheels"><i></i><i></i><i></i></div>
-        </div>
-        <div class="module-list" id="module-list"></div>
-        <div class="final-module" id="final-module" hidden></div>
-      </aside>
-    </section>
-
-    <div class="game-overlay" id="game-overlay" hidden>
-      <div class="overlay-card"><p class="eyebrow" id="overlay-label"></p><h2 id="overlay-title"></h2><p id="overlay-text"></p><button class="button" id="overlay-restart" type="button">Начать заново</button></div>
-    </div>
-  </main>
-  <script type="module" src="js/main.js"></script>
+  <strong>Codex работает!</strong>
 </body>
 </html>
