@@ -82,6 +82,30 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   cursor: pointer;
 }
 
+.shop {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  padding: clamp(18px, 4vw, 44px);
+  overflow-y: auto;
+  background: #080b16f2;
+}
+.shop-header, .shop-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.shop-header h2 { margin: 4px 0 22px; font-size: clamp(22px, 4vw, 38px); }
+.shop-kicker { color: #61f6d2; font-size: 11px; letter-spacing: .16em; }
+#shop-score { color: #ffd166; white-space: nowrap; }
+.shop-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.upgrade-card { min-height: 180px; padding: 18px; border: 1px solid #3a5276; border-radius: 8px; background: #111a2c; color: #edf7ff; text-align: left; cursor: pointer; }
+.upgrade-card:hover:not(:disabled), .upgrade-card:focus-visible { border-color: #61f6d2; transform: translateY(-2px); }
+.upgrade-card:disabled { opacity: .48; cursor: not-allowed; }
+.upgrade-card strong, .upgrade-card span { display: block; }
+.upgrade-card strong { margin-bottom: 12px; color: #fff; font-size: 18px; }
+.upgrade-card span { color: #9eb3c8; line-height: 1.5; }
+.upgrade-card em { display: block; margin-top: 20px; color: #ffd166; font-style: normal; }
+.shop-actions { margin-top: 20px; }
+.shop-actions button { padding: 11px 16px; border: 1px solid #415b79; border-radius: 4px; background: #14243a; color: #dcecff; cursor: pointer; }
+.shop-actions button:disabled { opacity: .4; cursor: not-allowed; }
+
 .help { justify-content: center; flex-wrap: wrap; }
 .mobile-controls { display: none; justify-content: space-between; align-items: center; padding: 0 8px; }
 .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 5px; }
@@ -104,4 +128,7 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   .status { min-width: 0; font-size: 10px; }
   .help { display: none; }
   .mobile-controls { display: flex; }
+  .shop-cards { grid-template-columns: 1fr; }
+  .upgrade-card { min-height: 0; }
+  .shop-actions { align-items: stretch; flex-direction: column; }
 }

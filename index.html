@@ -15,6 +15,7 @@
         <label>Корпус <progress id="health" max="100" value="100"></progress></label>
         <label>Щит <progress id="shield" max="100" value="100"></progress></label>
         <span id="armor" title="Целые грани брони">Броня: 8/8</span>
+        <span id="score">Очки: 0</span>
       </div>
       <div id="status" class="status">Найдите точку захвата</div>
     </header>
@@ -23,6 +24,17 @@
       <canvas id="game" width="960" height="600"></canvas>
       <div id="message" class="message" aria-live="polite"></div>
       <button id="restart" class="restart" type="button" hidden>Новый забег</button>
+      <section id="shop" class="shop" aria-label="Магазин улучшений" hidden>
+        <div class="shop-header">
+          <div><span class="shop-kicker">МЕЖДУ АРЕНАМИ</span><h2>Магазин улучшений</h2></div>
+          <strong id="shop-score">0 очков</strong>
+        </div>
+        <div id="shop-cards" class="shop-cards"></div>
+        <div class="shop-actions">
+          <button id="reroll" type="button">Рерол · 20</button>
+          <button id="shop-continue" type="button">Продолжить без покупки</button>
+        </div>
+      </section>
     </section>
 
     <section class="mobile-controls" aria-label="Сенсорное управление">

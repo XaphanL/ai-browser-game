@@ -4,6 +4,7 @@ export function createUi() {
   const health = document.querySelector('#health');
   const shield = document.querySelector('#shield');
   const armor = document.querySelector('#armor');
+  const score = document.querySelector('#score');
   const status = document.querySelector('#status');
   const message = document.querySelector('#message');
   const arena = document.querySelector('#arena-number');
@@ -12,9 +13,10 @@ export function createUi() {
     restart,
     render(state) {
       health.value = state.player.health;
-      health.max = PLAYER.maxHealth;
+      health.max = state.run.stats.maxHealth;
       shield.value = state.player.shield;
-      shield.max = PLAYER.maxShield;
+      shield.max = state.run.stats.maxShield;
+      score.textContent = `Очки: ${state.run.score}`;
       armor.textContent = `Броня: ${state.player.armor.filter(Boolean).length}/${PLAYER.armorSides}`;
       arena.textContent = String(state.arena).padStart(2, '0');
       restart.hidden = state.phase !== 'defeat' && state.phase !== 'victory';
@@ -25,6 +27,9 @@ export function createUi() {
       } else if (state.phase === 'escape') {
         status.textContent = 'Выберите следующую арену';
         message.textContent = 'ТОЧКА ЗАХВАЧЕНА // ВЫХОДЫ ОТКРЫТЫ';
+      } else if (state.phase === 'shop') {
+        status.textContent = 'Магазин улучшений';
+        message.textContent = '';
       } else if (state.phase === 'boss') {
         status.textContent = 'Комната босса';
         message.textContent = 'УНИЧТОЖЬТЕ СТРАЖА ЛАБИРИНТА';

@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ECONOMY, PLAYER, WORLD } from './config.js';
 import { movementVector } from './input.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -8,20 +8,20 @@ const normalizeAngle = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
 function updatePlayer(state, input, dt) {
   const player = state.player;
   const movement = movementVector(input);
-  player.x = clamp(player.x + movement.x * PLAYER.speed * dt, WORLD.margin, WORLD.width - WORLD.margin);
-  player.y = clamp(player.y + movement.y * PLAYER.speed * dt, WORLD.margin, WORLD.height - WORLD.margin);
+  player.x = clamp(player.x + movement.x * state.run.stats.speed * dt, WORLD.margin, WORLD.width - WORLD.margin);
+  player.y = clamp(player.y + movement.y * state.run.stats.speed * dt, WORLD.margin, WORLD.height - WORLD.margin);
   if (input.aimX !== null) player.aim = Math.atan2(input.aimY - player.y, input.aimX - player.x);
   else if (movement.moving) player.aim = Math.atan2(movement.y, movement.x);
 
   player.attackTimer = Math.max(0, player.attackTimer - dt);
   player.attackCooldown = Math.max(0, player.attackCooldown - dt);
   if (input.attack && !input.shield && player.attackTimer <= 0 && player.attackCooldown <= 0) {
-    player.attackTimer = PLAYER.swordAttackSeconds;
-    player.attackCooldown = PLAYER.swordAttackSeconds + PLAYER.swordCooldownSeconds;
+    player.attackTimer = PLAYER.swordAttackSeconds / state.run.stats.attackSpeed;
+    player.attackCooldown = (PLAYER.swordAttackSeconds + PLAYER.swordCooldownSeconds) / state.run.stats.attackSpeed;
     player.attackHits.length = 0;
   }
   player.shieldActive = input.shield && player.shield > 0 && player.attackTimer <= 0;
-  player.shield = clamp(player.shield + (player.shieldActive ? -PLAYER.shieldDrain : PLAYER.shieldRecharge) * dt, 0, PLAYER.maxShield);
+  player.shield = clamp(player.shield + (player.shieldActive ? -state.run.stats.shieldDrain : state.run.stats.shieldRecharge) * dt, 0, state.run.stats.maxShield);
   player.hitFlash = Math.max(0, player.hitFlash - dt);
   player.reflectionFlash = Math.max(0, player.reflectionFlash - dt);
 }
@@ -32,9 +32,9 @@ function updateSwordAttack(state) {
   for (const turret of state.turrets) {
     if (player.attackHits.includes(turret.id)) continue;
     const angle = Math.atan2(turret.y - player.y, turret.x - player.x);
-    const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= PLAYER.swordArc / 2;
-    if (inArc && distance(player, turret) <= PLAYER.swordRange + turret.radius) {
-      turret.health -= PLAYER.swordDamage;
+    const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2;
+    if (inArc && distance(player, turret) <= state.run.stats.swordRange + turret.radius) {
+      turret.health -= state.run.stats.swordDamage;
       turret.flash = .12;
       player.attackHits.push(turret.id);
     }
@@ -113,7 +113,7 @@ function updateProjectiles(state, dt, events) {
     if (!bullet.reflected && distance(bullet, state.player) < bullet.radius + playerCollisionRadius) {
       if (!reflectProjectile(bullet, state.player) && distance(bullet, state.player) < bullet.radius + PLAYER.armorRadius) {
         if (!absorbWithArmor(bullet, state.player) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
-          state.player.health -= bullet.damage;
+          state.player.health -= bullet.damage * state.run.stats.damageTaken;
           state.player.hitFlash = .16;
           bullet.life = 0;
         }
@@ -132,6 +132,14 @@ function updateProjectiles(state, dt, events) {
           break;
         }
       }
+    }
+  }
+  for (const turret of state.turrets) {
+    if (!turret.rewarded && turret.health <= 0) {
+      const reward = turret.boss ? ECONOMY.bossReward : ECONOMY.turretReward;
+      turret.rewarded = true;
+      state.run.score += reward;
+      events.push({ type: 'enemyKilled', reward });
     }
   }
   state.turrets = state.turrets.filter(turret => turret.health > 0);
@@ -165,7 +173,7 @@ function checkExits(state, events) {
 
 export function updateGame(state, input, dt) {
   const events = [];
-  if (state.phase === 'defeat' || state.phase === 'victory') return events;
+  if (state.phase === 'defeat' || state.phase === 'victory' || state.phase === 'shop') return events;
   state.elapsed += dt;
   updatePlayer(state, input, dt);
   updateSwordAttack(state);

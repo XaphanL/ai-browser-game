@@ -81,7 +81,7 @@ function drawArmor(ctx, player) {
   }
 }
 
-function drawPlayer(ctx, player) {
+function drawPlayer(ctx, player, stats) {
   ctx.save(); ctx.translate(player.x, player.y);
   ctx.fillStyle = player.hitFlash ? '#fff' : '#e6f0ff';
   ctx.strokeStyle = '#61f6d2'; ctx.lineWidth = 3;
@@ -89,14 +89,14 @@ function drawPlayer(ctx, player) {
   drawArmor(ctx, player);
   ctx.rotate(player.aim); ctx.fillStyle = '#61f6d2'; ctx.fillRect(5, -3, 19, 6);
   if (player.attackTimer > 0) {
-    const progress = 1 - player.attackTimer / PLAYER.swordAttackSeconds;
-    const swordAngle = -PLAYER.swordArc / 2 + PLAYER.swordArc * progress;
+    const progress = 1 - player.attackTimer / (PLAYER.swordAttackSeconds / stats.attackSpeed);
+    const swordAngle = -stats.swordArc / 2 + stats.swordArc * progress;
     ctx.save(); ctx.rotate(swordAngle);
     ctx.strokeStyle = '#fff1a6'; ctx.shadowBlur = 16; ctx.shadowColor = '#ffd166'; ctx.lineWidth = 7;
-    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(PLAYER.swordRange, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(stats.swordRange, 0); ctx.stroke();
     ctx.restore();
     ctx.strokeStyle = '#ffd16688'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, 0, PLAYER.swordRange, -PLAYER.swordArc / 2, swordAngle); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, stats.swordRange, -stats.swordArc / 2, swordAngle); ctx.stroke();
   }
   if (player.shieldActive) {
     ctx.strokeStyle = player.reflectionFlash ? '#ffffff' : '#6cfbe1';
@@ -137,7 +137,7 @@ export function createRenderer(canvas) {
       ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     }
     drawEffects(ctx, state.effects);
-    drawPlayer(ctx, state.player);
+    drawPlayer(ctx, state.player, state.run.stats);
     if (state.phase === 'defeat' || state.phase === 'victory') { ctx.fillStyle = '#080b16b8'; ctx.fillRect(0, 0, WORLD.width, WORLD.height); }
   };
 }

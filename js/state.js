@@ -12,7 +12,7 @@ function makeTurrets(count) {
   });
 }
 
-export function createGameState(arena = 1, difficulty = 'easy') {
+export function createGameState(arena = 1, difficulty = 'easy', run) {
   const rules = DIFFICULTIES[difficulty];
   const isBossRoom = arena > RUN.arenaRooms;
   return {
@@ -25,8 +25,8 @@ export function createGameState(arena = 1, difficulty = 'easy') {
       x: WORLD.width / 2,
       y: WORLD.height - 105,
       radius: PLAYER.radius,
-      health: PLAYER.maxHealth,
-      shield: PLAYER.maxShield,
+      health: run.stats.maxHealth,
+      shield: run.stats.maxShield,
       shieldActive: false,
       aim: -Math.PI / 2,
       hitFlash: 0,
@@ -48,6 +48,7 @@ export function createGameState(arena = 1, difficulty = 'easy') {
       { side: 'top', x: 480, y: 25, width: 150, height: 50, difficulty: 'normal' },
       { side: 'right', x: 935, y: 300, width: 50, height: 120, difficulty: 'hard' }
     ],
-    nextProjectileId: 1
+    nextProjectileId: 1,
+    run
   };
 }

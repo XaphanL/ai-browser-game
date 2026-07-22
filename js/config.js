@@ -2,6 +2,8 @@ export const WORLD = { width: 960, height: 600, margin: 34 };
 
 export const RUN = { arenaRooms: 4 };
 
+export const ECONOMY = { turretReward: 30, bossReward: 150, rerollCost: 20 };
+
 export const DIFFICULTIES = {
   easy: { label: 'Легко', color: '#61f6d2', turrets: 2, captureSeconds: 4, fireDelay: 1.8, bulletSpeed: 155 },
   normal: { label: 'Норма', color: '#ffd166', turrets: 3, captureSeconds: 6, fireDelay: 1.35, bulletSpeed: 190 },
