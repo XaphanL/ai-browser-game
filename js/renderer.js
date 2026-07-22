@@ -11,6 +11,7 @@ function drawGrid(ctx) {
 }
 
 function drawCapture(ctx, state) {
+  if (!state.capture) return;
   const capture = state.capture;
   const ratio = capture.progress / capture.required;
   ctx.fillStyle = state.phase === 'escape' ? '#61f6d226' : '#4d78ff18';
@@ -49,12 +50,34 @@ function drawTurrets(ctx, state) {
   for (const turret of state.turrets) {
     const angle = Math.atan2(state.player.y - turret.y, state.player.x - turret.x);
     ctx.save(); ctx.translate(turret.x, turret.y); ctx.rotate(angle);
-    ctx.fillStyle = turret.flash ? '#fff' : '#b94763';
-    ctx.strokeStyle = '#ff7690'; ctx.lineWidth = 2;
-    ctx.fillRect(-15, -15, 30, 30); ctx.strokeRect(-15, -15, 30, 30);
-    ctx.fillRect(5, -5, 26, 10);
+    const size = turret.boss ? 58 : 30;
+    ctx.fillStyle = turret.flash ? '#fff' : (turret.boss ? '#6d3fc0' : '#b94763');
+    ctx.strokeStyle = turret.boss ? '#bd83ff' : '#ff7690'; ctx.lineWidth = turret.boss ? 4 : 2;
+    ctx.fillRect(-size / 2, -size / 2, size, size); ctx.strokeRect(-size / 2, -size / 2, size, size);
+    ctx.fillRect(size / 4, turret.boss ? -8 : -5, turret.boss ? 43 : 26, turret.boss ? 16 : 10);
     ctx.restore();
-    for (let i = 0; i < turret.health; i++) { ctx.fillStyle = '#ff7690'; ctx.fillRect(turret.x - 13 + i * 10, turret.y + 24, 7, 3); }
+    if (turret.boss) {
+      ctx.fillStyle = '#231535'; ctx.fillRect(turret.x - 90, turret.y + 55, 180, 10);
+      ctx.fillStyle = '#bd83ff'; ctx.fillRect(turret.x - 90, turret.y + 55, 180 * turret.health / turret.maxHealth, 10);
+      ctx.strokeStyle = '#e5c7ff'; ctx.strokeRect(turret.x - 90, turret.y + 55, 180, 10);
+    } else {
+      for (let i = 0; i < turret.health; i++) { ctx.fillStyle = '#ff7690'; ctx.fillRect(turret.x - 13 + i * 10, turret.y + 24, 7, 3); }
+    }
+  }
+}
+
+function drawArmor(ctx, player) {
+  const step = Math.PI * 2 / PLAYER.armorSides;
+  const vertexRadius = PLAYER.armorRadius / Math.cos(step / 2);
+  for (let index = 0; index < PLAYER.armorSides; index++) {
+    if (!player.armor[index]) continue;
+    const angle = index * step;
+    ctx.strokeStyle = '#72a7ff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle - step / 2) * vertexRadius, Math.sin(angle - step / 2) * vertexRadius);
+    ctx.lineTo(Math.cos(angle + step / 2) * vertexRadius, Math.sin(angle + step / 2) * vertexRadius);
+    ctx.stroke();
   }
 }
 
@@ -63,6 +86,7 @@ function drawPlayer(ctx, player) {
   ctx.fillStyle = player.hitFlash ? '#fff' : '#e6f0ff';
   ctx.strokeStyle = '#61f6d2'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  drawArmor(ctx, player);
   ctx.rotate(player.aim); ctx.fillStyle = '#61f6d2'; ctx.fillRect(5, -3, 19, 6);
   if (player.shieldActive) {
     ctx.strokeStyle = '#6cfbe1'; ctx.shadowBlur = 18; ctx.shadowColor = '#61f6d2'; ctx.lineWidth = 6;
@@ -83,6 +107,6 @@ export function createRenderer(canvas) {
       ctx.beginPath(); ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     }
     drawPlayer(ctx, state.player);
-    if (state.phase === 'defeat') { ctx.fillStyle = '#080b16b8'; ctx.fillRect(0, 0, WORLD.width, WORLD.height); }
+    if (state.phase === 'defeat' || state.phase === 'victory') { ctx.fillStyle = '#080b16b8'; ctx.fillRect(0, 0, WORLD.width, WORLD.height); }
   };
 }

@@ -1,4 +1,4 @@
-import { DIFFICULTIES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, PLAYER, WORLD } from './config.js';
 import { movementVector } from './input.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -24,6 +24,7 @@ function updateCapture(state, dt, events) {
   state.capture.progress = clamp(state.capture.progress + (inside ? dt : -dt * .45), 0, state.capture.required);
   if (state.capture.progress >= state.capture.required) {
     state.phase = 'escape';
+    state.player.armor.fill(true);
     events.push({ type: 'captured' });
   }
 }
@@ -43,8 +44,9 @@ function updateTurrets(state, dt) {
     turret.flash = Math.max(0, turret.flash - dt);
     turret.cooldown -= dt;
     if (turret.cooldown <= 0 && distance(turret, state.player) < 620) {
-      fire(turret, state, rules);
-      turret.cooldown = rules.fireDelay * (.85 + Math.random() * .3);
+      const fireRules = turret.boss ? BOSS : rules;
+      fire(turret, state, fireRules);
+      turret.cooldown = fireRules.fireDelay * (.85 + Math.random() * .3);
     }
   }
 }
@@ -53,13 +55,26 @@ function reflectProjectile(projectile, player) {
   const angleToBullet = Math.atan2(projectile.y - player.y, projectile.x - player.x);
   const withinArc = Math.abs(normalizeAngle(angleToBullet - player.aim)) <= PLAYER.shieldArc / 2;
   if (!player.shieldActive || !withinArc || player.shield < 5) return false;
-  const speed = Math.hypot(projectile.vx, projectile.vy) * 1.35;
-  projectile.vx = Math.cos(player.aim) * speed;
-  projectile.vy = Math.sin(player.aim) * speed;
+  const normalX = Math.cos(angleToBullet);
+  const normalY = Math.sin(angleToBullet);
+  const dot = projectile.vx * normalX + projectile.vy * normalY;
+  projectile.vx = (projectile.vx - 2 * dot * normalX) * 1.35;
+  projectile.vy = (projectile.vy - 2 * dot * normalY) * 1.35;
   projectile.reflected = true;
-  projectile.x = player.x + Math.cos(player.aim) * (PLAYER.shieldRadius + 8);
-  projectile.y = player.y + Math.sin(player.aim) * (PLAYER.shieldRadius + 8);
+  projectile.x = player.x + normalX * (PLAYER.shieldRadius + projectile.radius + 1);
+  projectile.y = player.y + normalY * (PLAYER.shieldRadius + projectile.radius + 1);
   player.shield = Math.max(0, player.shield - 9);
+  return true;
+}
+
+function absorbWithArmor(projectile, player) {
+  const angle = normalizeAngle(Math.atan2(projectile.y - player.y, projectile.x - player.x));
+  const step = Math.PI * 2 / PLAYER.armorSides;
+  const facet = Math.round(angle / step + PLAYER.armorSides) % PLAYER.armorSides;
+  if (!player.armor[facet]) return false;
+  player.armor[facet] = false;
+  player.hitFlash = .1;
+  projectile.life = 0;
   return true;
 }
 
@@ -68,11 +83,14 @@ function updateProjectiles(state, dt, events) {
     bullet.x += bullet.vx * dt;
     bullet.y += bullet.vy * dt;
     bullet.life -= dt;
-    if (!bullet.reflected && distance(bullet, state.player) < bullet.radius + (state.player.shieldActive ? PLAYER.shieldRadius : state.player.radius)) {
-      if (!reflectProjectile(bullet, state.player) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
-        state.player.health -= bullet.damage;
-        state.player.hitFlash = .16;
-        bullet.life = 0;
+    const playerCollisionRadius = state.player.shieldActive ? PLAYER.shieldRadius : PLAYER.armorRadius;
+    if (!bullet.reflected && distance(bullet, state.player) < bullet.radius + playerCollisionRadius) {
+      if (!reflectProjectile(bullet, state.player) && distance(bullet, state.player) < bullet.radius + PLAYER.armorRadius) {
+        if (!absorbWithArmor(bullet, state.player) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
+          state.player.health -= bullet.damage;
+          state.player.hitFlash = .16;
+          bullet.life = 0;
+        }
       }
     }
     if (bullet.reflected) {
@@ -87,6 +105,11 @@ function updateProjectiles(state, dt, events) {
     }
   }
   state.turrets = state.turrets.filter(turret => turret.health > 0);
+  if (state.roomType === 'boss' && state.turrets.length === 0 && state.phase !== 'victory') {
+    state.phase = 'victory';
+    state.projectiles.length = 0;
+    events.push({ type: 'victory' });
+  }
   state.projectiles = state.projectiles.filter(bullet => bullet.life > 0 && bullet.x > -20 && bullet.x < WORLD.width + 20 && bullet.y > -20 && bullet.y < WORLD.height + 20);
   if (state.player.health <= 0) {
     state.player.health = 0;
@@ -107,10 +130,10 @@ function checkExits(state, events) {
 
 export function updateGame(state, input, dt) {
   const events = [];
-  if (state.phase === 'defeat') return events;
+  if (state.phase === 'defeat' || state.phase === 'victory') return events;
   state.elapsed += dt;
   updatePlayer(state, input, dt);
-  updateCapture(state, dt, events);
+  if (state.capture) updateCapture(state, dt, events);
   updateTurrets(state, dt);
   updateProjectiles(state, dt, events);
   checkExits(state, events);

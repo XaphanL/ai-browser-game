@@ -10,10 +10,11 @@
 <body>
   <main class="game-shell">
     <header class="hud" aria-label="Состояние игрока">
-      <div class="brand">ARENA // <span id="arena-number">01</span></div>
+      <div class="brand">ROOM // <span id="arena-number">01</span></div>
       <div class="meter-group">
         <label>Корпус <progress id="health" max="100" value="100"></progress></label>
         <label>Щит <progress id="shield" max="100" value="100"></progress></label>
+        <span id="armor" title="Целые грани брони">Броня: 8/8</span>
       </div>
       <div id="status" class="status">Найдите точку захвата</div>
     </header>
@@ -21,7 +22,7 @@
     <section class="viewport" aria-label="Игровая арена">
       <canvas id="game" width="960" height="600"></canvas>
       <div id="message" class="message" aria-live="polite"></div>
-      <button id="restart" class="restart" type="button" hidden>Начать заново</button>
+      <button id="restart" class="restart" type="button" hidden>Новый забег</button>
     </section>
 
     <section class="mobile-controls" aria-label="Сенсорное управление">

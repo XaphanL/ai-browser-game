@@ -1,5 +1,7 @@
 export const WORLD = { width: 960, height: 600, margin: 34 };
 
+export const RUN = { arenaRooms: 4 };
+
 export const DIFFICULTIES = {
   easy: { label: 'Легко', color: '#61f6d2', turrets: 2, captureSeconds: 4, fireDelay: 1.8, bulletSpeed: 155 },
   normal: { label: 'Норма', color: '#ffd166', turrets: 3, captureSeconds: 6, fireDelay: 1.35, bulletSpeed: 190 },
@@ -14,5 +16,14 @@ export const PLAYER = {
   shieldRadius: 29,
   shieldArc: Math.PI * 0.82,
   shieldDrain: 24,
-  shieldRecharge: 15
+  shieldRecharge: 15,
+  armorRadius: 23,
+  armorSides: 8
+};
+
+export const BOSS = {
+  radius: 38,
+  health: 24,
+  fireDelay: .72,
+  bulletSpeed: 215
 };
