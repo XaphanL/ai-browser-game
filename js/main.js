@@ -53,6 +53,36 @@ function placeAtEntrance(player, exitSide) {
   Object.assign(player, positions[exitSide]);
 }
 
+function playerPositionIsFree(candidate) {
+  const obstacleHit = state.obstacles.some(obstacle => {
+    const closestX = Math.max(obstacle.x - obstacle.width / 2, Math.min(candidate.x, obstacle.x + obstacle.width / 2));
+    const closestY = Math.max(obstacle.y - obstacle.height / 2, Math.min(candidate.y, obstacle.y + obstacle.height / 2));
+    return Math.hypot(candidate.x - closestX, candidate.y - closestY) < state.player.radius + 8;
+  });
+  const enemyHit = state.turrets.some(enemy => enemy.health > 0 && Math.hypot(candidate.x - enemy.x, candidate.y - enemy.y) < state.player.radius + enemy.radius + 18);
+  return !obstacleHit && !enemyHit;
+}
+
+function ensureSafePlayerPosition() {
+  if (playerPositionIsFree(state.player)) return;
+  const origin = { x: state.player.x, y: state.player.y };
+  for (const radius of [55, 90, 130, 175]) {
+    for (let index = 0; index < 12; index++) {
+      const angle = index / 12 * Math.PI * 2;
+      const candidate = {
+        x: Math.max(55, Math.min(905, origin.x + Math.cos(angle) * radius)),
+        y: Math.max(55, Math.min(545, origin.y + Math.sin(angle) * radius))
+      };
+      if (playerPositionIsFree(candidate)) {
+        Object.assign(state.player, candidate);
+        return;
+      }
+    }
+  }
+}
+
+ensureSafePlayerPosition();
+
 function enterRoom(targetId, exitSide) {
   const snapshot = playerSnapshot(state.player);
   const target = run.maze.rooms.get(targetId);
@@ -60,6 +90,7 @@ function enterRoom(targetId, exitSide) {
   run.roomStates.set(targetId, state);
   Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0 });
   placeAtEntrance(state.player, exitSide);
+  ensureSafePlayerPosition();
   markTransition(run, run.currentRoomId, targetId);
   clearInput();
 }
@@ -68,6 +99,7 @@ function reset() {
   run = createRunState();
   state = createGameState(run.maze.rooms.get(run.currentRoomId), run);
   run.roomStates.set(run.currentRoomId, state);
+  ensureSafePlayerPosition();
   pendingRoom = null;
   shop.hidden = true;
   clearInput();
@@ -99,6 +131,16 @@ function renderShop() {
     card.addEventListener('click', () => {
       const bought = isModule ? buyModule(run, upgrade) : buyUpgrade(run, upgrade);
       if (bought) {
+        if (isModule) {
+          const maxCells = run.module === 'retaliation' ? 2 : 1;
+          for (const roomState of run.roomStates.values()) {
+            for (const facet of roomState.player.armor) {
+              const gained = maxCells > facet.maxCells;
+              facet.maxCells = maxCells;
+              facet.cells = gained ? facet.cells + 1 : Math.min(facet.cells, maxCells);
+            }
+          }
+        }
         if (!isModule) purchasedOffers.add(upgrade.id);
         renderShop();
       }

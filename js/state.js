@@ -1,15 +1,62 @@
-import { BOSS, DIFFICULTIES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ENEMIES, OBSTACLES, PLAYER, WORLD } from './config.js';
 
 const turretPositions = [
   [150, 140], [810, 145], [150, 455], [810, 455], [480, 105], [480, 495]
 ];
 
-function makeTurrets(count) {
+function makeTurrets(count, startId = 0) {
   const offset = Math.floor(Math.random() * turretPositions.length);
   return Array.from({ length: count }, (_, index) => {
     const position = turretPositions[(index + offset) % turretPositions.length];
-    return { id: index, x: position[0], y: position[1], radius: 18, health: 3, cooldown: .5 + Math.random(), flash: 0 };
+    return { id: startId + index, type: 'turret', x: position[0], y: position[1], radius: 18, health: 3, cooldown: .5 + Math.random(), flash: 0 };
   });
+}
+
+const obstacleLayouts = [
+  [[300, 215, 90, 42], [660, 385, 90, 42], [480, 150, 54, 80], [480, 450, 54, 80], [245, 420, 70, 44], [715, 180, 70, 44], [480, 300, 56, 56]],
+  [[250, 190, 58, 100], [710, 410, 58, 100], [430, 390, 100, 42], [530, 210, 100, 42], [255, 430, 76, 42], [705, 170, 76, 42], [480, 300, 46, 90]]
+];
+
+function makeObstacles(count) {
+  const layout = obstacleLayouts[Math.floor(Math.random() * obstacleLayouts.length)];
+  return layout.slice(0, count).map(([x, y, width, height], index) => {
+    const destructible = index % 3 !== 0;
+    return { id: index, x, y, width, height, destructible, health: destructible ? OBSTACLES.destructibleHealth : Infinity };
+  });
+}
+
+function overlapsRect(point, radius, rect, padding = 0) {
+  const dx = Math.max(Math.abs(point.x - rect.x) - rect.width / 2, 0);
+  const dy = Math.max(Math.abs(point.y - rect.y) - rect.height / 2, 0);
+  return Math.hypot(dx, dy) < radius + padding;
+}
+
+function spawnMobileEnemies(rules, obstacles, occupied, startId) {
+  const candidates = [
+    [110, 100], [850, 100], [110, 500], [850, 500], [310, 110], [650, 110],
+    [310, 490], [650, 490], [110, 300], [850, 300], [380, 230], [580, 370]
+  ].sort(() => Math.random() - .5);
+  const enemies = [];
+  const add = type => {
+    const config = ENEMIES[type];
+    const position = candidates.find(([x, y]) => {
+      const point = { x, y };
+      return !obstacles.some(item => overlapsRect(point, config.radius, item, 12))
+        && !occupied.some(item => Math.hypot(item.x - x, item.y - y) < item.radius + config.radius + 35);
+    });
+    if (!position) return;
+    candidates.splice(candidates.indexOf(position), 1);
+    const enemy = {
+      id: startId + enemies.length, type, x: position[0], y: position[1], radius: config.radius,
+      health: config.health, maxHealth: config.health, cooldown: .4 + Math.random() * .5, windup: 0,
+      flash: 0, shielded: type === 'swordsman', knockbackX: 0, knockbackY: 0
+    };
+    enemies.push(enemy);
+    occupied.push(enemy);
+  };
+  for (let index = 0; index < rules.swordsmen; index++) add('swordsman');
+  for (let index = 0; index < rules.drones; index++) add('drone');
+  return enemies;
 }
 
 const EXIT_GEOMETRY = {
@@ -24,6 +71,12 @@ export function createGameState(room, run) {
   const rules = DIFFICULTIES[difficulty];
   const isBossRoom = room.type === 'boss';
   const isMerchantRoom = room.type === 'merchant';
+  const obstacles = (!isBossRoom && !isMerchantRoom) ? makeObstacles(rules.obstacles) : [];
+  const turrets = isBossRoom ? [{
+    id: 0, type: 'turret', x: WORLD.width / 2, y: 145, radius: BOSS.radius,
+    health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
+  }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets));
+  const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
   return {
     arena: room.distance + 1,
     roomId: room.id,
@@ -50,10 +103,9 @@ export function createGameState(room, run) {
     },
     capture: (isBossRoom || isMerchantRoom) ? null : { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds },
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
-    turrets: isBossRoom ? [{
-      id: 0, x: WORLD.width / 2, y: 145, radius: BOSS.radius,
-      health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
-    }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets)),
+    turrets: [...turrets, ...mobileEnemies],
+    obstacles,
+    pickups: [],
     projectiles: [],
     effects: [],
     exits: isBossRoom ? [] : Object.entries(room.neighbors).map(([side, targetId]) => ({

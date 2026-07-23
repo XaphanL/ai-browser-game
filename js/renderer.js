@@ -92,6 +92,29 @@ function drawTurrets(ctx, state) {
   for (const turret of state.turrets) {
     const angle = Math.atan2(state.player.y - turret.y, state.player.x - turret.x);
     ctx.save(); ctx.translate(turret.x, turret.y); ctx.rotate(angle);
+    if (turret.type === 'drone') {
+      ctx.fillStyle = turret.flash ? '#fff' : '#ffbd59';
+      ctx.strokeStyle = '#fff1a6'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(0, 9); ctx.lineTo(-13, 0); ctx.lineTo(0, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ffbd59'; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, 10); ctx.moveTo(-18, 10); ctx.lineTo(18, -10); ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+    if (turret.type === 'swordsman') {
+      ctx.fillStyle = turret.flash ? '#fff' : '#9a73d9'; ctx.strokeStyle = '#d6b7ff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, turret.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f5d66f'; ctx.fillRect(8, -2, 29, 4);
+      if (turret.shielded) {
+        ctx.strokeStyle = '#72a7ff'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(0, 0, 25, -.8, .8); ctx.stroke();
+      } else if (turret.windup > 0) {
+        ctx.strokeStyle = '#ff5d7a'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2 * (1 - turret.windup / .78)); ctx.stroke();
+      }
+      ctx.restore();
+      for (let i = 0; i < turret.health; i++) { ctx.fillStyle = '#d6b7ff'; ctx.fillRect(turret.x - 8 + i * 10, turret.y + 23, 7, 3); }
+      continue;
+    }
     const size = turret.boss ? 58 : 30;
     ctx.fillStyle = turret.flash ? '#fff' : (turret.boss ? '#6d3fc0' : '#b94763');
     ctx.strokeStyle = turret.boss ? '#bd83ff' : '#ff7690'; ctx.lineWidth = turret.boss ? 4 : 2;
@@ -108,6 +131,25 @@ function drawTurrets(ctx, state) {
   }
 }
 
+function drawObstacles(ctx, state) {
+  for (const obstacle of state.obstacles) {
+    ctx.fillStyle = obstacle.flash ? '#fff' : (obstacle.destructible ? '#74543f' : '#25344c');
+    ctx.strokeStyle = obstacle.destructible ? '#d49a58' : '#526987';
+    ctx.lineWidth = 3;
+    ctx.fillRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
+    ctx.strokeRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height);
+    if (obstacle.destructible) {
+      ctx.strokeStyle = '#321f1a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(obstacle.x - 10, obstacle.y - obstacle.height / 2); ctx.lineTo(obstacle.x + 5, obstacle.y + 3); ctx.lineTo(obstacle.x - 2, obstacle.y + obstacle.height / 2); ctx.stroke();
+    }
+  }
+  for (const pickup of state.pickups) {
+    ctx.fillStyle = '#61f6d2'; ctx.shadowBlur = 18; ctx.shadowColor = '#61f6d2';
+    ctx.beginPath(); ctx.arc(pickup.x, pickup.y, pickup.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0b1020'; ctx.fillRect(pickup.x - 2, pickup.y - 5, 4, 10); ctx.shadowBlur = 0;
+  }
+}
+
 function drawArmor(ctx, player) {
   const step = Math.PI * 2 / PLAYER.armorSides;
   const vertexRadius = PLAYER.armorRadius / Math.cos(step / 2);
@@ -121,6 +163,11 @@ function drawArmor(ctx, player) {
     ctx.moveTo(Math.cos(angle - step / 2) * vertexRadius, Math.sin(angle - step / 2) * vertexRadius);
     ctx.lineTo(Math.cos(angle + step / 2) * vertexRadius, Math.sin(angle + step / 2) * vertexRadius);
     ctx.stroke();
+    for (let cell = 0; cell < facet.maxCells; cell++) {
+      const markerAngle = angle + (cell - (facet.maxCells - 1) / 2) * .12;
+      ctx.fillStyle = cell < facet.cells ? '#bcd5ff' : '#263650';
+      ctx.beginPath(); ctx.arc(Math.cos(markerAngle) * (PLAYER.armorRadius + 7), Math.sin(markerAngle) * (PLAYER.armorRadius + 7), 2.2, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 
@@ -167,7 +214,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawMerchant(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;

@@ -4,6 +4,7 @@ export function createUi() {
   const health = document.querySelector('#health');
   const shield = document.querySelector('#shield');
   const armor = document.querySelector('#armor');
+  const armorCells = document.querySelector('#armor-cells');
   const score = document.querySelector('#score');
   const status = document.querySelector('#status');
   const message = document.querySelector('#message');
@@ -20,6 +21,13 @@ export function createUi() {
       const cells = state.player.armor.reduce((sum, facet) => sum + facet.cells, 0);
       const maxCells = state.player.armor.reduce((sum, facet) => sum + facet.maxCells, 0);
       armor.textContent = `Броня: ${cells}/${maxCells}`;
+      armorCells.replaceChildren(...state.player.armor.map((facet, index) => {
+        const segment = document.createElement('span');
+        segment.className = 'armor-segment';
+        segment.title = `Сегмент ${index + 1}: ${facet.cells} из ${facet.maxCells}`;
+        segment.textContent = `${index + 1}:${'●'.repeat(facet.cells)}${'○'.repeat(facet.maxCells - facet.cells)}`;
+        return segment;
+      }));
       arena.textContent = String(state.arena).padStart(2, '0');
       restart.hidden = state.phase !== 'defeat' && state.phase !== 'victory';
       if (state.phase === 'capture') {
