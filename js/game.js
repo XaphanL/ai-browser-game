@@ -61,10 +61,10 @@ function activateModule(state) {
   if (state.run.module === 'dash') {
     const facet = player.armor.find(item => item.cells > 0);
     if (!facet) return;
-    facet.cells--;
+    if (Math.random() >= state.run.stats.dashRefundChance) facet.cells--;
     const angle = inputAimAngle(player);
-    player.x = clamp(player.x + Math.cos(angle) * PLAYER.dashDistance, WORLD.margin, WORLD.width - WORLD.margin);
-    player.y = clamp(player.y + Math.sin(angle) * PLAYER.dashDistance, WORLD.margin, WORLD.height - WORLD.margin);
+    player.x = clamp(player.x + Math.cos(angle) * state.run.stats.dashDistance, WORLD.margin, WORLD.width - WORLD.margin);
+    player.y = clamp(player.y + Math.sin(angle) * state.run.stats.dashDistance, WORLD.margin, WORLD.height - WORLD.margin);
     state.effects.push({ type: 'dash', x: player.x, y: player.y, life: .25, maxLife: .25 });
   } else if (state.run.module === 'retaliation') {
     const assigned = new Map();
@@ -72,14 +72,14 @@ function activateModule(state) {
       assigned.set(bullet.targetId, (assigned.get(bullet.targetId) || 0) + 1);
     }
     for (const facet of player.armor) {
-      if (facet.charge < PLAYER.armorChargeHits) continue;
+      if (facet.charge < state.run.stats.retaliationChargeHits) continue;
       const target = chooseHomingTarget(state, assigned);
       if (!target) break;
-      facet.charge -= PLAYER.armorChargeHits;
+      facet.charge -= state.run.stats.retaliationChargeHits;
       assigned.set(target.id, (assigned.get(target.id) || 0) + 1);
       state.projectiles.push({
         id: state.nextProjectileId++, x: player.x, y: player.y, vx: 0, vy: 0,
-        radius: 5, reflected: true, homing: true, targetId: target.id, damage: 1, life: 7
+        radius: 5, reflected: true, homing: true, targetId: target.id, damage: state.run.stats.homingDamage, life: 7
       });
     }
   }
@@ -97,7 +97,7 @@ function updateSwordAttack(state) {
     const angle = Math.atan2(turret.y - player.y, turret.x - player.x);
     const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2;
     if (inArc && distance(player, turret) <= state.run.stats.swordRange + turret.radius) {
-      turret.health -= state.run.stats.swordDamage;
+      turret.health -= state.run.stats.swordDamage + (state.run.module === 'dash' ? 1 : 0);
       turret.lastHit = 'sword';
       turret.flash = .12;
       if (turret.type !== 'turret') {
@@ -115,7 +115,7 @@ function updateSwordAttack(state) {
     const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2;
     const reach = Math.hypot(obstacle.width, obstacle.height) / 2;
     if (inArc && distance(player, obstacle) <= state.run.stats.swordRange + reach) {
-      obstacle.health -= state.run.stats.swordDamage;
+      obstacle.health -= state.run.stats.swordDamage + (state.run.module === 'dash' ? 1 : 0);
       obstacle.flash = .12;
       player.attackHits.push(hitId);
     }
@@ -282,7 +282,7 @@ function updateProjectiles(state, dt, events) {
     if (bullet.reflected) {
       for (const turret of state.turrets) {
         if (distance(bullet, turret) < bullet.radius + turret.radius) {
-          if (!turret.shielded) turret.health--;
+          if (!turret.shielded) turret.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
           turret.lastHit = bullet.homing ? 'module' : 'reflection';
           turret.flash = .12;
           bullet.life = 0;
@@ -301,7 +301,8 @@ function updateProjectiles(state, dt, events) {
       if (state.run.module === 'vampire') {
         const damaged = state.player.armor.filter(facet => facet.cells < facet.maxCells);
         if (damaged.length) damaged[Math.floor(Math.random() * damaged.length)].cells++;
-        if (turret.lastHit === 'sword') state.player.health = Math.min(state.run.stats.maxHealth, state.player.health + 8);
+        const repair = state.run.stats.vampireKillHeal + (turret.lastHit === 'sword' ? state.run.stats.vampireSwordHeal : 0);
+        state.player.health = Math.min(state.run.stats.maxHealth, state.player.health + repair);
       }
       events.push({ type: 'enemyKilled', reward });
     }

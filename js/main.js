@@ -4,7 +4,7 @@ import { updateGame } from './game.js';
 import { createRenderer } from './renderer.js';
 import { createUi } from './ui.js';
 import { ECONOMY } from './config.js';
-import { buyModule, buyUpgrade, createRunState, drawOffers, MODULES } from './upgrades.js';
+import { buyModule, buyUpgrade, createRunState, drawOffers, MODULES, RARITIES } from './upgrades.js';
 import { markTransition } from './maze.js';
 import { createMinimap } from './minimap.js';
 
@@ -81,6 +81,17 @@ function ensureSafePlayerPosition() {
   }
 }
 
+function syncArmorCapacity() {
+  for (const roomState of run.roomStates.values()) {
+    roomState.player.armor.forEach((facet, index) => {
+      const maxCells = 1 + run.armorBonuses[index] + (run.module === 'retaliation' ? 1 : 0);
+      const difference = maxCells - facet.maxCells;
+      facet.maxCells = maxCells;
+      facet.cells = difference > 0 ? facet.cells + difference : Math.min(facet.cells, maxCells);
+    });
+  }
+}
+
 ensureSafePlayerPosition();
 
 function enterRoom(targetId, exitSide) {
@@ -127,20 +138,13 @@ function renderShop() {
     const isModule = MODULES.includes(upgrade);
     card.disabled = run.score < upgrade.price || (isModule ? run.module === upgrade.id : purchasedOffers.has(upgrade.id));
     if (isModule) card.classList.add('module-card');
-    card.innerHTML = `<strong>${upgrade.title}</strong><span>${upgrade.description}</span><em>${upgrade.price} очков</em>`;
+    if (!isModule) card.classList.add(`rarity-${upgrade.rarity}`);
+    const rarity = isModule ? 'Классовый модуль' : RARITIES[upgrade.rarity].label;
+    card.innerHTML = `<small>${rarity}</small><strong>${upgrade.title}</strong><span>${upgrade.description}</span><em>${upgrade.price} очков</em>`;
     card.addEventListener('click', () => {
       const bought = isModule ? buyModule(run, upgrade) : buyUpgrade(run, upgrade);
       if (bought) {
-        if (isModule) {
-          const maxCells = run.module === 'retaliation' ? 2 : 1;
-          for (const roomState of run.roomStates.values()) {
-            for (const facet of roomState.player.armor) {
-              const gained = maxCells > facet.maxCells;
-              facet.maxCells = maxCells;
-              facet.cells = gained ? facet.cells + 1 : Math.min(facet.cells, maxCells);
-            }
-          }
-        }
+        syncArmorCapacity();
         if (!isModule) purchasedOffers.add(upgrade.id);
         renderShop();
       }
@@ -151,7 +155,7 @@ function renderShop() {
 
 function openShop(targetId, side, mode = 'upgrade') {
   shopMode = mode;
-  currentOffers = mode === 'merchant' ? run.merchantOffers : drawOffers();
+  currentOffers = mode === 'merchant' ? run.merchantOffers : drawOffers(3, run);
   purchasedOffers = mode === 'merchant' ? run.merchantPurchased : new Set();
   pendingRoom = { targetId, side, previousPhase: state.phase };
   state.phase = 'shop';
@@ -163,7 +167,7 @@ function openShop(targetId, side, mode = 'upgrade') {
 reroll.addEventListener('click', () => {
   if (run.score < ECONOMY.rerollCost) return;
   run.score -= ECONOMY.rerollCost;
-  currentOffers = drawOffers();
+  currentOffers = drawOffers(3, run);
   purchasedOffers = new Set();
   renderShop();
 });

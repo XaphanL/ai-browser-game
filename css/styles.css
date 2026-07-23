@@ -116,11 +116,18 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
 .upgrade-card:hover:not(:disabled), .upgrade-card:focus-visible { border-color: #61f6d2; transform: translateY(-2px); }
 .upgrade-card:disabled { opacity: .48; cursor: not-allowed; }
 .upgrade-card strong, .upgrade-card span { display: block; }
+.upgrade-card small { display: block; margin-bottom: 7px; color: #8da0b7; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
 .upgrade-card strong { margin-bottom: 12px; color: #fff; font-size: 18px; }
 .upgrade-card span { color: #9eb3c8; line-height: 1.5; }
 .upgrade-card em { display: block; margin-top: 20px; color: #ffd166; font-style: normal; }
 .module-card { border-color: #72549c; background: #171329; }
 .module-card strong { color: #d9b8ff; }
+.rarity-common { border-color: #526987; }
+.rarity-common small, .rarity-common strong { color: #c5d0dc; }
+.rarity-uncommon { border-color: #3d9c72; background: #10231f; }
+.rarity-uncommon small, .rarity-uncommon strong { color: #6ee7a8; }
+.rarity-rare { border-color: #8c61c4; background: #1c1630; box-shadow: inset 0 0 24px #7e4db51a; }
+.rarity-rare small, .rarity-rare strong { color: #d3a7ff; }
 .shop-actions { margin-top: 20px; }
 .shop-actions button { padding: 11px 16px; border: 1px solid #415b79; border-radius: 4px; background: #14243a; color: #dcecff; cursor: pointer; }
 .shop-actions button:disabled { opacity: .4; cursor: not-allowed; }

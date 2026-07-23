@@ -25,7 +25,7 @@ export const PLAYER = {
   dashDistance: 150,
   armorChargeHits: 3,
   homingBulletSpeed: 330,
-  swordDamage: 2,
+  swordDamage: 1,
   swordRange: 62,
   swordArc: Math.PI * .72,
   swordAttackSeconds: .3,
@@ -38,7 +38,7 @@ export const ENEMIES = {
 };
 
 export const OBSTACLES = {
-  destructibleHealth: 4,
+  destructibleHealth: 2,
   energyDropChance: .22
 };
 

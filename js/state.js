@@ -4,22 +4,27 @@ const turretPositions = [
   [150, 140], [810, 145], [150, 455], [810, 455], [480, 105], [480, 495]
 ];
 
-function makeTurrets(count, startId = 0) {
+function makeTurrets(count, obstacles, startId = 0) {
   const offset = Math.floor(Math.random() * turretPositions.length);
-  return Array.from({ length: count }, (_, index) => {
-    const position = turretPositions[(index + offset) % turretPositions.length];
+  const available = Array.from({ length: turretPositions.length }, (_, index) => turretPositions[(index + offset) % turretPositions.length])
+    .filter(([x, y]) => !obstacles.some(item => overlapsRect({ x, y }, 18, item, 12)));
+  return available.slice(0, count).map((position, index) => {
     return { id: startId + index, type: 'turret', x: position[0], y: position[1], radius: 18, health: 3, cooldown: .5 + Math.random(), flash: 0 };
   });
 }
 
 const obstacleLayouts = [
-  [[300, 215, 90, 42], [660, 385, 90, 42], [480, 150, 54, 80], [480, 450, 54, 80], [245, 420, 70, 44], [715, 180, 70, 44], [480, 300, 56, 56]],
-  [[250, 190, 58, 100], [710, 410, 58, 100], [430, 390, 100, 42], [530, 210, 100, 42], [255, 430, 76, 42], [705, 170, 76, 42], [480, 300, 46, 90]]
+  [[300, 215, 90, 42], [660, 385, 90, 42], [480, 150, 54, 80], [480, 450, 54, 80], [245, 420, 70, 44], [715, 180, 70, 44], [350, 470, 64, 38], [480, 300, 56, 56]],
+  [[250, 190, 58, 100], [710, 410, 58, 100], [400, 170, 100, 42], [560, 430, 100, 42], [255, 430, 76, 42], [705, 170, 76, 42], [610, 465, 64, 38], [480, 300, 46, 90]]
 ];
 
 function makeObstacles(count) {
   const layout = obstacleLayouts[Math.floor(Math.random() * obstacleLayouts.length)];
-  return layout.slice(0, count).map(([x, y, width, height], index) => {
+  const capture = { x: WORLD.width / 2, y: WORLD.height / 2 };
+  return layout
+    .filter(([x, y, width, height]) => !overlapsRect(capture, 64, { x, y, width, height }, 18))
+    .slice(0, count)
+    .map(([x, y, width, height], index) => {
     const destructible = index % 3 !== 0;
     return { id: index, x, y, width, height, destructible, health: destructible ? OBSTACLES.destructibleHealth : Infinity };
   });
@@ -75,7 +80,7 @@ export function createGameState(room, run) {
   const turrets = isBossRoom ? [{
     id: 0, type: 'turret', x: WORLD.width / 2, y: 145, radius: BOSS.radius,
     health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
-  }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets));
+  }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
   const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
   return {
     arena: room.distance + 1,
@@ -99,7 +104,10 @@ export function createGameState(room, run) {
       attackHits: [],
       reflectionFlash: 0,
       abilityPressed: false,
-      armor: Array.from({ length: PLAYER.armorSides }, () => ({ cells: PLAYER.armorCells, maxCells: PLAYER.armorCells, charge: 0 }))
+      armor: Array.from({ length: PLAYER.armorSides }, (_, index) => {
+        const maxCells = PLAYER.armorCells + run.armorBonuses[index] + (run.module === 'retaliation' ? 1 : 0);
+        return { cells: maxCells, maxCells, charge: 0 };
+      })
     },
     capture: (isBossRoom || isMerchantRoom) ? null : { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds },
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
