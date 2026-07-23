@@ -54,7 +54,9 @@ function spawnMobileEnemies(rules, obstacles, occupied, startId) {
     const enemy = {
       id: startId + enemies.length, type, x: position[0], y: position[1], radius: config.radius,
       health: config.health, maxHealth: config.health, cooldown: .4 + Math.random() * .5, windup: 0,
-      flash: 0, shielded: type === 'swordsman', knockbackX: 0, knockbackY: 0
+      flash: 0, shielded: type === 'swordsman', knockbackX: 0, knockbackY: 0,
+      navTimer: 0, waypoint: null, strafeSign: Math.random() < .5 ? -1 : 1,
+      movementPhase: Math.random() * Math.PI * 2
     };
     enemies.push(enemy);
     occupied.push(enemy);
@@ -99,6 +101,8 @@ export function createGameState(room, run) {
       shieldPressed: false,
       aim: -Math.PI / 2,
       hitFlash: 0,
+      vx: 0,
+      vy: 0,
       attackTimer: 0,
       attackCooldown: 0,
       attackHits: [],

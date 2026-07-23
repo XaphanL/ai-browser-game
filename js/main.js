@@ -99,7 +99,7 @@ function enterRoom(targetId, exitSide) {
   const target = run.maze.rooms.get(targetId);
   state = run.roomStates.get(targetId) || createGameState(target, run);
   run.roomStates.set(targetId, state);
-  Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0 });
+  Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0, vx: 0, vy: 0 });
   placeAtEntrance(state.player, exitSide);
   ensureSafePlayerPosition();
   markTransition(run, run.currentRoomId, targetId);

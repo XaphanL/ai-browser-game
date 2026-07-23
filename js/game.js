@@ -22,10 +22,24 @@ function moveWithObstacles(entity, dx, dy, state, ignoresObstacles = false) {
   if (ignoresObstacles || !state.obstacles.some(item => circleHitsObstacle(entity.x, nextY, entity.radius, item))) entity.y = nextY;
 }
 
+function approach(current, target, amount) {
+  if (current < target) return Math.min(target, current + amount);
+  return Math.max(target, current - amount);
+}
+
 function updatePlayer(state, input, dt) {
   const player = state.player;
   const movement = movementVector(input);
-  moveWithObstacles(player, movement.x * state.run.stats.speed * dt, movement.y * state.run.stats.speed * dt, state);
+  const targetVx = movement.x * state.run.stats.speed;
+  const targetVy = movement.y * state.run.stats.speed;
+  const response = movement.moving ? PLAYER.acceleration : PLAYER.deceleration;
+  player.vx = approach(player.vx || 0, targetVx, response * dt);
+  player.vy = approach(player.vy || 0, targetVy, response * dt);
+  const previousX = player.x;
+  const previousY = player.y;
+  moveWithObstacles(player, player.vx * dt, player.vy * dt, state);
+  if (Math.abs(player.x - previousX) < Math.abs(player.vx * dt) * .25) player.vx = 0;
+  if (Math.abs(player.y - previousY) < Math.abs(player.vy * dt) * .25) player.vy = 0;
   if (input.aimX !== null) player.aim = Math.atan2(input.aimY - player.y, input.aimX - player.x);
   else if (movement.moving) player.aim = Math.atan2(movement.y, movement.x);
 
@@ -171,13 +185,105 @@ function damagePlayerFromAngle(state, damage, source) {
   player.hitFlash = .16;
 }
 
+function segmentHitsExpandedRect(from, to, obstacle, padding) {
+  const bounds = [
+    [from.x, to.x - from.x, obstacle.x - obstacle.width / 2 - padding, obstacle.x + obstacle.width / 2 + padding],
+    [from.y, to.y - from.y, obstacle.y - obstacle.height / 2 - padding, obstacle.y + obstacle.height / 2 + padding]
+  ];
+  let near = 0;
+  let far = 1;
+  for (const [start, delta, min, max] of bounds) {
+    if (Math.abs(delta) < .0001) {
+      if (start <= min || start >= max) return false;
+      continue;
+    }
+    const first = (min - start) / delta;
+    const second = (max - start) / delta;
+    near = Math.max(near, Math.min(first, second));
+    far = Math.min(far, Math.max(first, second));
+    if (near > far) return false;
+  }
+  return near < 1 && far > 0;
+}
+
+function hasClearPath(from, to, radius, state) {
+  return !state.obstacles.some(obstacle => segmentHitsExpandedRect(from, to, obstacle, radius + 5));
+}
+
+function findNavigationWaypoint(enemy, target, state) {
+  if (hasClearPath(enemy, target, enemy.radius, state)) return null;
+  const nodes = [{ x: enemy.x, y: enemy.y }, target];
+  for (const obstacle of state.obstacles) {
+    const padding = enemy.radius + 10;
+    for (const x of [obstacle.x - obstacle.width / 2 - padding, obstacle.x + obstacle.width / 2 + padding]) {
+      for (const y of [obstacle.y - obstacle.height / 2 - padding, obstacle.y + obstacle.height / 2 + padding]) {
+        if (x > WORLD.margin + enemy.radius && x < WORLD.width - WORLD.margin - enemy.radius
+          && y > WORLD.margin + enemy.radius && y < WORLD.height - WORLD.margin - enemy.radius) nodes.push({ x, y });
+      }
+    }
+  }
+  const costs = nodes.map(() => Infinity);
+  const previous = nodes.map(() => -1);
+  const visited = new Set();
+  costs[0] = 0;
+  while (visited.size < nodes.length) {
+    let current = -1;
+    for (let index = 0; index < nodes.length; index++) {
+      if (!visited.has(index) && (current < 0 || costs[index] < costs[current])) current = index;
+    }
+    if (current < 0 || !Number.isFinite(costs[current]) || current === 1) break;
+    visited.add(current);
+    for (let next = 1; next < nodes.length; next++) {
+      if (visited.has(next) || !hasClearPath(nodes[current], nodes[next], enemy.radius, state)) continue;
+      const candidate = costs[current] + distance(nodes[current], nodes[next]);
+      if (candidate < costs[next]) {
+        costs[next] = candidate;
+        previous[next] = current;
+      }
+    }
+  }
+  if (!Number.isFinite(costs[1])) return null;
+  let step = 1;
+  while (previous[step] > 0) step = previous[step];
+  return step === 1 ? null : { ...nodes[step] };
+}
+
+function enemyMovementTarget(enemy, state, config) {
+  const playerDistance = distance(enemy, state.player);
+  const angle = Math.atan2(state.player.y - enemy.y, state.player.x - enemy.x);
+  const sideOffset = Math.min(config.strafe, Math.max(0, playerDistance - config.attackRange) * .24);
+  const pulse = .65 + Math.sin(state.elapsed * 2.2 + (enemy.movementPhase || 0)) * .35;
+  const strafeSign = enemy.strafeSign || 1;
+  return {
+    x: state.player.x + Math.cos(angle + strafeSign * Math.PI / 2) * sideOffset * pulse,
+    y: state.player.y + Math.sin(angle + strafeSign * Math.PI / 2) * sideOffset * pulse
+  };
+}
+
+function separationVector(enemy, state) {
+  let x = 0;
+  let y = 0;
+  for (const other of state.turrets) {
+    if (other === enemy || other.health <= 0 || other.type === 'turret') continue;
+    const dx = enemy.x - other.x;
+    const dy = enemy.y - other.y;
+    const range = enemy.radius + other.radius + 22;
+    const currentDistance = Math.hypot(dx, dy);
+    if (currentDistance > 0 && currentDistance < range) {
+      const strength = (range - currentDistance) / range;
+      x += dx / currentDistance * strength;
+      y += dy / currentDistance * strength;
+    }
+  }
+  return { x, y };
+}
+
 function updateMobileEnemies(state, dt) {
   for (const enemy of state.turrets) {
     if (enemy.health <= 0 || enemy.type === 'turret') continue;
     const config = ENEMIES[enemy.type];
     enemy.flash = Math.max(0, enemy.flash - dt);
     enemy.cooldown = Math.max(0, enemy.cooldown - dt);
-    const angle = Math.atan2(state.player.y - enemy.y, state.player.x - enemy.x);
     const gap = distance(enemy, state.player) - enemy.radius - state.player.radius;
 
     if (enemy.type === 'swordsman' && gap <= config.attackRange) {
@@ -197,13 +303,23 @@ function updateMobileEnemies(state, dt) {
     } else {
       enemy.shielded = enemy.type === 'swordsman';
       const speed = config.speed;
-      const previousX = enemy.x;
-      const previousY = enemy.y;
-      moveWithObstacles(enemy, Math.cos(angle) * speed * dt, Math.sin(angle) * speed * dt, state, enemy.type === 'drone');
-      if (enemy.type === 'swordsman' && Math.hypot(enemy.x - previousX, enemy.y - previousY) < speed * dt * .2) {
-        const turn = enemy.id % 2 ? Math.PI / 2 : -Math.PI / 2;
-        moveWithObstacles(enemy, Math.cos(angle + turn) * speed * dt, Math.sin(angle + turn) * speed * dt, state);
+      const movementTarget = enemyMovementTarget(enemy, state, config);
+      if (enemy.type === 'swordsman') {
+        enemy.navTimer = (enemy.navTimer || 0) - dt;
+        if (enemy.navTimer <= 0 || (enemy.waypoint && distance(enemy, enemy.waypoint) < 16)) {
+          enemy.waypoint = findNavigationWaypoint(enemy, movementTarget, state);
+          enemy.navTimer = .22 + (enemy.id % 4) * .035;
+        }
       }
+      const target = enemy.waypoint || movementTarget;
+      const angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
+      const separation = separationVector(enemy, state);
+      let moveX = Math.cos(angle) + separation.x * .85;
+      let moveY = Math.sin(angle) + separation.y * .85;
+      const moveLength = Math.hypot(moveX, moveY) || 1;
+      moveX /= moveLength;
+      moveY /= moveLength;
+      moveWithObstacles(enemy, moveX * speed * dt, moveY * speed * dt, state, enemy.type === 'drone');
     }
 
     if (enemy.knockbackX || enemy.knockbackY) {

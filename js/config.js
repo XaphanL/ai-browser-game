@@ -13,6 +13,8 @@ export const DIFFICULTIES = {
 export const PLAYER = {
   radius: 15,
   speed: 220,
+  acceleration: 1500,
+  deceleration: 1900,
   maxHealth: 100,
   maxShield: 100,
   shieldRadius: 29,
@@ -33,8 +35,8 @@ export const PLAYER = {
 };
 
 export const ENEMIES = {
-  swordsman: { radius: 17, health: 2, speed: 92, shieldRadius: 24, attackRange: 43, windup: .78, cooldown: 1.15, damage: 24 },
-  drone: { radius: 11, health: 1, speed: 142, attackRange: 27, cooldown: .7, damage: 12 }
+  swordsman: { radius: 17, health: 2, speed: 92, shieldRadius: 24, attackRange: 43, windup: .78, cooldown: 1.15, damage: 24, strafe: 24 },
+  drone: { radius: 11, health: 1, speed: 142, attackRange: 27, cooldown: .7, damage: 12, strafe: 42 }
 };
 
 export const OBSTACLES = {
