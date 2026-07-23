@@ -31,6 +31,8 @@ export function createRunState() {
     roomStates: new Map(),
     upgrades: [],
     module: null,
+    merchantOffers: drawOffers(),
+    merchantPurchased: new Set(),
     stats: {
       maxHealth: PLAYER.maxHealth,
       damageTaken: 1,

@@ -86,7 +86,7 @@ function renderShop() {
   reroll.disabled = run.score < ECONOMY.rerollCost;
   document.querySelector('#shop-kicker').textContent = shopMode === 'merchant' ? 'КОМНАТА ТОРГОВЦА' : 'МЕЖДУ АРЕНАМИ';
   document.querySelector('#shop-title').textContent = shopMode === 'merchant' ? 'Улучшения и классовые модули' : 'Магазин улучшений';
-  shopContinue.textContent = shopMode === 'merchant' ? 'Покинуть торговца' : 'Продолжить';
+  shopContinue.textContent = shopMode === 'merchant' ? 'Закрыть торговлю' : 'Продолжить';
   const offers = shopMode === 'merchant' ? [...currentOffers, ...MODULES] : currentOffers;
   shopCards.replaceChildren(...offers.map(upgrade => {
     const card = document.createElement('button');
@@ -109,8 +109,8 @@ function renderShop() {
 
 function openShop(targetId, side, mode = 'upgrade') {
   shopMode = mode;
-  currentOffers = drawOffers();
-  purchasedOffers = new Set();
+  currentOffers = mode === 'merchant' ? run.merchantOffers : drawOffers();
+  purchasedOffers = mode === 'merchant' ? run.merchantPurchased : new Set();
   pendingRoom = { targetId, side, previousPhase: state.phase };
   state.phase = 'shop';
   clearInput();
@@ -133,12 +133,14 @@ function frame(time) {
   previousTime = time;
   const events = updateGame(state, input, dt);
   for (const event of events) {
+    if (event.type === 'merchantShop') {
+      openShop(null, null, 'merchant');
+      continue;
+    }
     if (event.type !== 'nextArena') continue;
     if (run.visited.has(event.targetId)) enterRoom(event.targetId, event.side);
-    else if (run.maze.rooms.get(event.targetId).type === 'merchant') {
-      enterRoom(event.targetId, event.side);
-      openShop(null, null, 'merchant');
-    } else openShop(event.targetId, event.side);
+    else if (run.maze.rooms.get(event.targetId).type === 'merchant') enterRoom(event.targetId, event.side);
+    else openShop(event.targetId, event.side);
   }
   renderGame(state);
   renderMinimap(run);

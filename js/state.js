@@ -38,6 +38,7 @@ export function createGameState(room, run) {
       health: run.stats.maxHealth,
       shield: run.stats.maxShield,
       shieldActive: false,
+      shieldPressed: false,
       aim: -Math.PI / 2,
       hitFlash: 0,
       attackTimer: 0,
@@ -48,6 +49,7 @@ export function createGameState(room, run) {
       armor: Array.from({ length: PLAYER.armorSides }, () => ({ cells: PLAYER.armorCells, maxCells: PLAYER.armorCells, charge: 0 }))
     },
     capture: (isBossRoom || isMerchantRoom) ? null : { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds },
+    merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
     turrets: isBossRoom ? [{
       id: 0, x: WORLD.width / 2, y: 145, radius: BOSS.radius,
       health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true

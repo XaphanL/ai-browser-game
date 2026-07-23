@@ -34,7 +34,7 @@ export function createUi() {
         message.textContent = '';
       } else if (state.phase === 'merchant') {
         status.textContent = 'Комната торговца';
-        message.textContent = 'ТОРГОВЕЦ МОДУЛЯМИ';
+        message.textContent = 'РАЗБУДИТЕ КОТА КНОПКОЙ ЩИТА';
       } else if (state.phase === 'boss') {
         status.textContent = 'Комната босса';
         message.textContent = 'УНИЧТОЖЬТЕ СТРАЖА ЛАБИРИНТА';

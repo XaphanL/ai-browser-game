@@ -30,22 +30,62 @@ function drawExits(ctx, state) {
   for (const exit of state.exits) {
     const open = state.phase === 'escape' || state.phase === 'merchant';
     const rules = DIFFICULTIES[exit.difficulty];
+    const isBossEntrance = state.run.maze.rooms.get(exit.targetId).type === 'boss';
     ctx.save();
     ctx.translate(exit.x, exit.y);
-    ctx.fillStyle = open ? `${rules.color}2b` : '#111827';
-    ctx.strokeStyle = open ? rules.color : '#39465c';
-    ctx.lineWidth = 3;
+    ctx.fillStyle = isBossEntrance ? (open ? '#6d3fc044' : '#21152f') : (open ? `${rules.color}2b` : '#111827');
+    ctx.strokeStyle = isBossEntrance ? '#bd83ff' : (open ? rules.color : '#39465c');
+    ctx.lineWidth = isBossEntrance ? 6 : 3;
     ctx.fillRect(-exit.width / 2, -exit.height / 2, exit.width, exit.height);
     ctx.strokeRect(-exit.width / 2, -exit.height / 2, exit.width, exit.height);
-    ctx.fillStyle = open ? rules.color : '#526176';
+    if (isBossEntrance) {
+      ctx.strokeStyle = '#e5c7ff88';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-exit.width / 2 + 9, -exit.height / 2 + 9, exit.width - 18, exit.height - 18);
+      ctx.fillStyle = '#bd83ff';
+      for (const offset of [-.28, 0, .28]) {
+        ctx.beginPath();
+        ctx.arc(exit.width * offset, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.fillStyle = isBossEntrance ? '#e5c7ff' : (open ? rules.color : '#526176');
     ctx.font = '700 13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const label = state.run.visited.has(exit.targetId) ? 'ПРОЙДЕНО' : rules.label.toUpperCase();
+    const label = state.run.visited.has(exit.targetId) ? 'ПРОЙДЕНО' : (isBossEntrance ? '⚠ БОСС ⚠' : rules.label.toUpperCase());
     if (exit.side === 'left') { ctx.rotate(Math.PI / 2); ctx.fillText(label, 0, -37); }
     else if (exit.side === 'right') { ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, -37); }
     else if (exit.side === 'bottom') ctx.fillText(label, 0, -40);
     else ctx.fillText(label, 0, 40);
     ctx.restore();
   }
+}
+
+function drawMerchant(ctx, state) {
+  if (!state.merchant) return;
+  const cat = state.merchant;
+  const near = Math.hypot(state.player.x - cat.x, state.player.y - cat.y) <= cat.interactionRadius;
+  ctx.save();
+  ctx.translate(cat.x, cat.y);
+  ctx.fillStyle = '#18111f';
+  ctx.beginPath(); ctx.ellipse(0, 26, 88, 25, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#d49a58'; ctx.strokeStyle = near ? '#fff1a6' : '#8b5d37'; ctx.lineWidth = near ? 4 : 3;
+  ctx.beginPath(); ctx.ellipse(0, 0, 67, 42, -.08, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-52, -16, 29, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-75, -32); ctx.lineTo(-69, -62); ctx.lineTo(-48, -40); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-45, -40); ctx.lineTo(-28, -58); ctx.lineTo(-25, -28); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#3a2730'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(-59, -17, 8, .2, Math.PI - .2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-39, -17, 8, .2, Math.PI - .2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(48, 3, 31, -.7, 2.6); ctx.stroke();
+  ctx.fillStyle = '#f4d7a1'; ctx.font = '700 17px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('Z', 21, -48); ctx.font = '700 13px monospace'; ctx.fillText('Z', 38, -62);
+  if (near) {
+    ctx.fillStyle = '#080b16dd'; ctx.strokeStyle = '#61f6d2'; ctx.lineWidth = 2;
+    ctx.fillRect(-132, 64, 264, 36); ctx.strokeRect(-132, 64, 264, 36);
+    ctx.fillStyle = '#dffff8'; ctx.font = '700 13px monospace';
+    ctx.fillText('НАЖМИТЕ ЩИТ — ТОРГОВАТЬ', 0, 87);
+  }
+  ctx.restore();
 }
 
 function drawTurrets(ctx, state) {
@@ -127,7 +167,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawMerchant(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;

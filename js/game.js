@@ -20,6 +20,8 @@ function updatePlayer(state, input, dt) {
     player.attackCooldown = (PLAYER.swordAttackSeconds + PLAYER.swordCooldownSeconds) / state.run.stats.attackSpeed;
     player.attackHits.length = 0;
   }
+  const shieldStarted = input.shield && !player.shieldPressed;
+  player.shieldPressed = input.shield;
   player.shieldActive = input.shield && player.shield > 0 && player.attackTimer <= 0;
   player.shield = clamp(player.shield + (player.shieldActive ? -state.run.stats.shieldDrain : state.run.stats.shieldRecharge) * dt, 0, state.run.stats.maxShield);
   player.hitFlash = Math.max(0, player.hitFlash - dt);
@@ -27,6 +29,7 @@ function updatePlayer(state, input, dt) {
   const abilityStarted = input.ability && !player.abilityPressed;
   player.abilityPressed = input.ability;
   if (abilityStarted) activateModule(state);
+  return shieldStarted;
 }
 
 function chooseHomingTarget(state, assigned) {
@@ -238,7 +241,11 @@ export function updateGame(state, input, dt) {
   const events = [];
   if (state.phase === 'defeat' || state.phase === 'victory' || state.phase === 'shop') return events;
   state.elapsed += dt;
-  updatePlayer(state, input, dt);
+  const shieldStarted = updatePlayer(state, input, dt);
+  if (state.merchant && shieldStarted && distance(state.player, state.merchant) <= state.merchant.interactionRadius) {
+    state.player.shieldActive = false;
+    events.push({ type: 'merchantShop' });
+  }
   updateSwordAttack(state);
   if (state.capture) updateCapture(state, dt, events);
   updateTurrets(state, dt);
