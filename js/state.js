@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, ENEMIES, OBSTACLES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, WORLD } from './config.js';
 
 const turretPositions = [
   [150, 140], [810, 145], [150, 455], [810, 455], [480, 105], [480, 495]
@@ -28,6 +28,16 @@ function makeObstacles(count) {
     const destructible = index % 3 !== 0;
     return { id: index, x, y, width, height, destructible, health: destructible ? OBSTACLES.destructibleHealth : Infinity };
   });
+}
+
+function makeCrystals(difficulty) {
+  const count = difficulty === 'hard' ? 4 : 3;
+  const positions = [[220, 120], [740, 120], [740, 480], [220, 480]];
+  return positions.slice(0, count).map(([x, y], index) => ({
+    id: index, x, y, radius: 25, health: OBJECTIVES.crystalHealth,
+    maxHealth: OBJECTIVES.crystalHealth, active: index === 0,
+    cooldown: 1.2 + index * .25, telegraph: 0, targetX: 0, targetY: 0, flash: 0
+  }));
 }
 
 function overlapsRect(point, radius, rect, padding = 0) {
@@ -78,18 +88,29 @@ export function createGameState(room, run) {
   const rules = DIFFICULTIES[difficulty];
   const isBossRoom = room.type === 'boss';
   const isMerchantRoom = room.type === 'merchant';
+  const objectiveType = (!isBossRoom && !isMerchantRoom) ? (room.objective || 'clear') : null;
   const obstacles = (!isBossRoom && !isMerchantRoom) ? makeObstacles(rules.obstacles) : [];
   const turrets = isBossRoom ? [{
     id: 0, type: 'turret', x: WORLD.width / 2, y: 145, radius: BOSS.radius,
     health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
   }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
   const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
+  if (objectiveType === 'hunt') {
+    const targets = [...mobileEnemies, ...turrets].slice(0, difficulty === 'hard' ? 3 : 2);
+    for (const target of targets) target.marked = true;
+  }
+  const crystals = objectiveType === 'crystals' ? makeCrystals(difficulty) : [];
   return {
     arena: room.distance + 1,
     roomId: room.id,
     difficulty,
     roomType: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : 'arena'),
-    phase: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : 'capture'),
+    phase: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : 'objective'),
+    objective: objectiveType ? {
+      type: objectiveType,
+      timer: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0,
+      required: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0
+    } : null,
     elapsed: 0,
     player: {
       x: WORLD.width / 2,
@@ -113,7 +134,9 @@ export function createGameState(room, run) {
         return { cells: maxCells, maxCells, charge: 0 };
       })
     },
-    capture: (isBossRoom || isMerchantRoom) ? null : { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds },
+    capture: objectiveType === 'capture' ? { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds } : null,
+    crystals,
+    laser: null,
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
     turrets: [...turrets, ...mobileEnemies],
     obstacles,

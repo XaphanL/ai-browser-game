@@ -30,13 +30,25 @@ export function createUi() {
       }));
       arena.textContent = String(state.arena).padStart(2, '0');
       restart.hidden = state.phase !== 'defeat' && state.phase !== 'victory';
-      if (state.phase === 'capture') {
+      if (state.phase === 'objective' && state.objective?.type === 'capture') {
         const inside = Math.hypot(state.player.x - state.capture.x, state.player.y - state.capture.y) < state.capture.radius;
         status.textContent = inside ? 'Захват точки' : 'Войдите в зону';
         message.textContent = '';
       } else if (state.phase === 'escape') {
         status.textContent = 'Выберите следующую арену';
-        message.textContent = 'ТОЧКА ЗАХВАЧЕНА // ВЫХОДЫ ОТКРЫТЫ';
+        message.textContent = 'ЗАДАНИЕ ВЫПОЛНЕНО // ВЫХОДЫ ОТКРЫТЫ';
+      } else if (state.phase === 'objective' && state.objective?.type === 'clear') {
+        status.textContent = `Зачистите комнату: ${state.turrets.length}`;
+        message.textContent = 'УНИЧТОЖЬТЕ ВСЕХ ПРОТИВНИКОВ';
+      } else if (state.phase === 'objective' && state.objective?.type === 'crystals') {
+        status.textContent = `Энергокристаллы: ${state.crystals.filter(item => item.health > 0).length}`;
+        message.textContent = 'ЛАЗЕР ПЕРЕКРЫВАЮТ ПРОЧНЫЕ БАРЬЕРЫ';
+      } else if (state.phase === 'objective' && state.objective?.type === 'survive') {
+        status.textContent = `Продержитесь: ${Math.ceil(state.objective.timer)} с`;
+        message.textContent = 'ПЕРЕЖИВИТЕ АТАКУ';
+      } else if (state.phase === 'objective' && state.objective?.type === 'hunt') {
+        status.textContent = `Командиры: ${state.turrets.filter(item => item.marked).length}`;
+        message.textContent = 'УНИЧТОЖЬТЕ ОТМЕЧЕННЫЕ ЦЕЛИ';
       } else if (state.phase === 'shop') {
         status.textContent = 'Магазин улучшений';
         message.textContent = '';

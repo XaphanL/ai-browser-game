@@ -18,12 +18,21 @@ function shuffled(items) {
   return result;
 }
 
+function rollObjective() {
+  const roll = Math.random();
+  if (roll < .58) return 'clear';
+  if (roll < .72) return 'crystals';
+  if (roll < .84) return 'capture';
+  if (roll < .93) return 'survive';
+  return 'hunt';
+}
+
 export function generateMaze(width = RUN.mazeWidth, height = RUN.mazeHeight) {
   const rooms = new Map();
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const id = key(x, y);
-      rooms.set(id, { id, x, y, distance: Infinity, type: 'arena', difficulty: 'easy', neighbors: {} });
+      rooms.set(id, { id, x, y, distance: Infinity, type: 'arena', objective: 'clear', difficulty: 'easy', neighbors: {} });
     }
   }
 
@@ -64,6 +73,7 @@ export function generateMaze(width = RUN.mazeWidth, height = RUN.mazeHeight) {
   const merchant = merchantCandidates.sort((a, b) => Math.abs(a.distance - boss.distance / 2) - Math.abs(b.distance - boss.distance / 2))[0];
   if (merchant) merchant.type = 'merchant';
   for (const room of rooms.values()) {
+    if (room.type === 'arena') room.objective = room.id === startId ? 'clear' : rollObjective();
     if (room.id === startId || room.type === 'boss') continue;
     const roll = Math.random();
     room.difficulty = room.distance <= 2 ? (roll < .55 ? 'easy' : 'normal') : (roll < .25 ? 'easy' : roll < .7 ? 'normal' : 'hard');

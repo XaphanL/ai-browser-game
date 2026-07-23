@@ -13,8 +13,9 @@ export const DIFFICULTIES = {
 export const PLAYER = {
   radius: 15,
   speed: 220,
-  acceleration: 1500,
-  deceleration: 1900,
+  acceleration: 2100,
+  turnAcceleration: 3600,
+  deceleration: 2800,
   maxHealth: 100,
   maxShield: 100,
   shieldRadius: 29,
@@ -32,6 +33,14 @@ export const PLAYER = {
   swordArc: Math.PI * .72,
   swordAttackSeconds: .3,
   swordCooldownSeconds: .18
+};
+
+export const OBJECTIVES = {
+  crystalHealth: 4,
+  crystalTelegraphSeconds: .9,
+  crystalFireDelay: 2.8,
+  crystalLaserDamage: 28,
+  survivalSeconds: { easy: 12, normal: 16, hard: 20 }
 };
 
 export const ENEMIES = {

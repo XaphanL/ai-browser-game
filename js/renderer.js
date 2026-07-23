@@ -23,7 +23,29 @@ function drawCapture(ctx, state) {
   ctx.strokeStyle = '#61f6d2';
   ctx.beginPath(); ctx.arc(capture.x, capture.y, capture.radius + 12, -.5 * Math.PI, (-.5 + ratio * 2) * Math.PI); ctx.stroke();
   ctx.fillStyle = '#dcecff'; ctx.font = '700 13px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(state.phase === 'escape' ? 'ЗАХВАЧЕНО' : `${Math.round(ratio * 100)}%`, capture.x, capture.y + 5);
+  ctx.fillText(state.phase === 'escape' ? 'ГОТОВО' : `${Math.round(ratio * 100)}%`, capture.x, capture.y + 5);
+}
+
+function drawCrystals(ctx, state) {
+  if (state.laser) {
+    ctx.strokeStyle = state.laser.firing ? '#ffffff' : '#ff4d6d88';
+    ctx.lineWidth = state.laser.firing ? 9 : 3;
+    ctx.shadowBlur = 18; ctx.shadowColor = '#ff4d6d';
+    ctx.beginPath(); ctx.moveTo(state.laser.x1, state.laser.y1); ctx.lineTo(state.laser.x2, state.laser.y2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  for (const crystal of state.crystals) {
+    if (crystal.health <= 0) continue;
+    ctx.save(); ctx.translate(crystal.x, crystal.y);
+    ctx.fillStyle = crystal.flash ? '#fff' : (crystal.active ? '#ff5d7a' : '#7f5ac9');
+    ctx.strokeStyle = crystal.active ? '#ffd0d9' : '#bd9cff'; ctx.lineWidth = 3;
+    ctx.shadowBlur = crystal.active ? 22 : 8; ctx.shadowColor = ctx.fillStyle;
+    ctx.beginPath(); ctx.moveTo(0, -28); ctx.lineTo(21, -5); ctx.lineTo(13, 25); ctx.lineTo(-13, 25); ctx.lineTo(-21, -5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#24152f'; ctx.fillRect(-25, 34, 50, 5);
+    ctx.fillStyle = '#ff7690'; ctx.fillRect(-25, 34, 50 * crystal.health / crystal.maxHealth, 5);
+    ctx.restore();
+  }
 }
 
 function drawExits(ctx, state) {
@@ -96,6 +118,10 @@ function drawTurrets(ctx, state) {
       ctx.fillStyle = turret.flash ? '#fff' : '#ffbd59';
       ctx.strokeStyle = '#fff1a6'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(0, 9); ctx.lineTo(-13, 0); ctx.lineTo(0, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (turret.marked) {
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, turret.radius + 8, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.strokeStyle = '#ffbd59'; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, 10); ctx.moveTo(-18, 10); ctx.lineTo(18, -10); ctx.stroke();
       ctx.restore();
       continue;
@@ -103,6 +129,10 @@ function drawTurrets(ctx, state) {
     if (turret.type === 'swordsman') {
       ctx.fillStyle = turret.flash ? '#fff' : '#9a73d9'; ctx.strokeStyle = '#d6b7ff'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, turret.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      if (turret.marked) {
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, turret.radius + 8, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.fillStyle = '#f5d66f'; ctx.fillRect(8, -2, 29, 4);
       if (turret.shielded) {
         ctx.strokeStyle = '#72a7ff'; ctx.lineWidth = 5;
@@ -119,6 +149,9 @@ function drawTurrets(ctx, state) {
     ctx.fillStyle = turret.flash ? '#fff' : (turret.boss ? '#6d3fc0' : '#b94763');
     ctx.strokeStyle = turret.boss ? '#bd83ff' : '#ff7690'; ctx.lineWidth = turret.boss ? 4 : 2;
     ctx.fillRect(-size / 2, -size / 2, size, size); ctx.strokeRect(-size / 2, -size / 2, size, size);
+    if (turret.marked) {
+      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.strokeRect(-size / 2 - 7, -size / 2 - 7, size + 14, size + 14);
+    }
     ctx.fillRect(size / 4, turret.boss ? -8 : -5, turret.boss ? 43 : 26, turret.boss ? 16 : 10);
     ctx.restore();
     if (turret.boss) {
@@ -214,7 +247,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;

@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, OBSTACLES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, WORLD } from './config.js';
 import { movementVector } from './input.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -22,9 +22,17 @@ function moveWithObstacles(entity, dx, dy, state, ignoresObstacles = false) {
   if (ignoresObstacles || !state.obstacles.some(item => circleHitsObstacle(entity.x, nextY, entity.radius, item))) entity.y = nextY;
 }
 
-function approach(current, target, amount) {
-  if (current < target) return Math.min(target, current + amount);
-  return Math.max(target, current - amount);
+function approachVelocity(player, targetX, targetY, amount) {
+  const dx = targetX - player.vx;
+  const dy = targetY - player.vy;
+  const gap = Math.hypot(dx, dy);
+  if (gap <= amount || gap === 0) {
+    player.vx = targetX;
+    player.vy = targetY;
+    return;
+  }
+  player.vx += dx / gap * amount;
+  player.vy += dy / gap * amount;
 }
 
 function updatePlayer(state, input, dt) {
@@ -32,9 +40,11 @@ function updatePlayer(state, input, dt) {
   const movement = movementVector(input);
   const targetVx = movement.x * state.run.stats.speed;
   const targetVy = movement.y * state.run.stats.speed;
-  const response = movement.moving ? PLAYER.acceleration : PLAYER.deceleration;
-  player.vx = approach(player.vx || 0, targetVx, response * dt);
-  player.vy = approach(player.vy || 0, targetVy, response * dt);
+  const currentSpeed = Math.hypot(player.vx || 0, player.vy || 0);
+  const opposing = movement.moving && currentSpeed > 1
+    && (player.vx * targetVx + player.vy * targetVy) / (currentSpeed * state.run.stats.speed) < .35;
+  const response = !movement.moving ? PLAYER.deceleration : (opposing ? PLAYER.turnAcceleration : PLAYER.acceleration);
+  approachVelocity(player, targetVx, targetVy, response * dt);
   const previousX = player.x;
   const previousY = player.y;
   moveWithObstacles(player, player.vx * dt, player.vy * dt, state);
@@ -134,16 +144,78 @@ function updateSwordAttack(state) {
       player.attackHits.push(hitId);
     }
   }
+  for (const crystal of state.crystals) {
+    const hitId = `crystal-${crystal.id}`;
+    if (crystal.health <= 0 || player.attackHits.includes(hitId)) continue;
+    const angle = Math.atan2(crystal.y - player.y, crystal.x - player.x);
+    if (Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2
+      && distance(player, crystal) <= state.run.stats.swordRange + crystal.radius) {
+      crystal.health -= state.run.stats.swordDamage + (state.run.module === 'dash' ? 1 : 0);
+      crystal.flash = .12;
+      player.attackHits.push(hitId);
+    }
+  }
 }
 
 function updateCapture(state, dt, events) {
-  if (state.phase !== 'capture') return;
+  if (state.phase !== 'objective') return;
   const inside = distance(state.player, state.capture) <= state.capture.radius - state.player.radius / 2;
   state.capture.progress = clamp(state.capture.progress + (inside ? dt : -dt * .45), 0, state.capture.required);
   if (state.capture.progress >= state.capture.required) {
-    state.phase = 'escape';
-    for (const facet of state.player.armor) facet.cells = facet.maxCells;
-    events.push({ type: 'captured' });
+    completeObjective(state, events);
+  }
+}
+
+function completeObjective(state, events) {
+  if (state.phase !== 'objective') return;
+  state.phase = 'escape';
+  state.laser = null;
+  for (const facet of state.player.armor) facet.cells = facet.maxCells;
+  events.push({ type: 'objectiveComplete', objective: state.objective.type });
+}
+
+function updateCrystals(state, dt) {
+  if (state.objective?.type !== 'crystals' || state.phase !== 'objective') return;
+  for (const crystal of state.crystals) crystal.flash = Math.max(0, crystal.flash - dt);
+  const living = state.crystals.filter(crystal => crystal.health > 0);
+  for (const crystal of state.crystals) crystal.active = crystal === living[0];
+  const active = living[0];
+  if (!active) return;
+  if (active.telegraph > 0) {
+    active.telegraph -= dt;
+    state.laser = { x1: active.x, y1: active.y, x2: active.targetX, y2: active.targetY, firing: active.telegraph <= 0 };
+    if (active.telegraph <= 0) {
+      const target = { x: active.targetX, y: active.targetY };
+      const blocked = state.obstacles.some(obstacle => segmentHitsExpandedRect(active, target, obstacle, 2));
+      if (!blocked && distanceToSegment(state.player, active, target) <= state.player.radius + 7) {
+        damagePlayerFromAngle(state, OBJECTIVES.crystalLaserDamage, active);
+      }
+      active.cooldown = OBJECTIVES.crystalFireDelay;
+    }
+    return;
+  }
+  state.laser = null;
+  active.cooldown -= dt;
+  if (active.cooldown <= 0) {
+    active.targetX = state.player.x;
+    active.targetY = state.player.y;
+    active.telegraph = OBJECTIVES.crystalTelegraphSeconds;
+  }
+}
+
+function updateObjective(state, dt, events) {
+  if (state.phase !== 'objective' || !state.objective) return;
+  const type = state.objective.type;
+  if (type === 'capture') updateCapture(state, dt, events);
+  if (type === 'survive') {
+    state.objective.timer = Math.max(0, state.objective.timer - dt);
+    if (state.objective.timer === 0) completeObjective(state, events);
+  } else if (type === 'clear' && state.turrets.length === 0) {
+    completeObjective(state, events);
+  } else if (type === 'hunt' && !state.turrets.some(enemy => enemy.marked)) {
+    completeObjective(state, events);
+  } else if (type === 'crystals' && state.crystals.every(crystal => crystal.health <= 0)) {
+    completeObjective(state, events);
   }
 }
 
@@ -204,6 +276,14 @@ function segmentHitsExpandedRect(from, to, obstacle, padding) {
     if (near > far) return false;
   }
   return near < 1 && far > 0;
+}
+
+function distanceToSegment(point, from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const ratio = lengthSquared ? clamp(((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared, 0, 1) : 0;
+  return Math.hypot(point.x - (from.x + dx * ratio), point.y - (from.y + dy * ratio));
 }
 
 function hasClearPath(from, to, radius, state) {
@@ -405,6 +485,14 @@ function updateProjectiles(state, dt, events) {
           break;
         }
       }
+      for (const crystal of bullet.life > 0 ? state.crystals : []) {
+        if (crystal.health > 0 && distance(bullet, crystal) < bullet.radius + crystal.radius) {
+          crystal.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
+          crystal.flash = .12;
+          bullet.life = 0;
+          break;
+        }
+      }
     }
   }
   for (const turret of state.turrets) {
@@ -478,10 +566,11 @@ export function updateGame(state, input, dt) {
     events.push({ type: 'merchantShop' });
   }
   updateSwordAttack(state);
-  if (state.capture) updateCapture(state, dt, events);
+  updateCrystals(state, dt);
   updateTurrets(state, dt);
   updateMobileEnemies(state, dt);
   updateProjectiles(state, dt, events);
+  updateObjective(state, dt, events);
   updateEffects(state, dt);
   checkExits(state, events);
   return events;
