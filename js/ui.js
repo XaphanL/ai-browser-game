@@ -46,7 +46,7 @@ export function createUi() {
         message.textContent = state.reinforcements?.warning > 0 ? 'ПОДКРЕПЛЕНИЕ // ЗОНА ВЫСАДКИ' : 'УНИЧТОЖЬТЕ ВСЕХ ПРОТИВНИКОВ';
       } else if (state.phase === 'objective' && state.objective?.type === 'crystals') {
         status.textContent = `Энергокристаллы: ${state.crystals.filter(item => item.health > 0).length}`;
-        message.textContent = 'ЛАЗЕР ПЕРЕКРЫВАЮТ ПРОЧНЫЕ БАРЬЕРЫ';
+        message.textContent = 'ПОСЛЕ ВЫСТРЕЛА АКТИВИРУЕТСЯ ДРУГОЙ КРИСТАЛЛ';
       } else if (state.phase === 'objective' && state.objective?.type === 'survive') {
         status.textContent = `Продержитесь: ${Math.ceil(state.objective.timer)} с`;
         message.textContent = 'ПЕРЕЖИВИТЕ АТАКУ';

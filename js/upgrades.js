@@ -17,15 +17,34 @@ export const UPGRADES = [
   upgrade('arc', 'Широкий замах', '+12° к сектору удара', 100, 'common', run => { run.stats.swordArc += Math.PI / 15; }),
   upgrade('battery', 'Ёмкая батарея', '+20 к максимуму щита', 110, 'common', run => { run.stats.maxShield += 20; }),
   upgrade('recharge', 'Быстрая зарядка', '+25% к восстановлению щита', 115, 'common', run => { run.stats.shieldRecharge *= 1.25; }),
+  upgrade('short-dodge', 'Маневровые сопла', '-8% к откату уклонения', 110, 'common', run => { run.stats.dodgeCooldownMultiplier *= .92; }),
+  upgrade('sword-reach', 'Удлинитель клинка', '+6 к дальности меча', 105, 'common', run => { run.stats.swordRange += 6; }),
   upgrade('plating', 'Композитная обшивка', '-10% к получаемому урону', 165, 'uncommon', run => { run.stats.damageTaken *= .9; }),
   upgrade('range', 'Длинное лезвие', '+12 к дальности меча', 155, 'uncommon', run => { run.stats.swordRange += 12; }),
   upgrade('tempo', 'Боевой привод', '+15% к скорости атак', 170, 'uncommon', run => { run.stats.attackSpeed *= 1.15; }),
   upgrade('efficiency', 'Экономичный барьер', '-15% к расходу щита', 160, 'uncommon', run => { run.stats.shieldDrain *= .85; }),
+  upgrade('combat-capacitor', 'Боевой конденсатор', '+12% к ёмкости и восстановлению щита', 170, 'uncommon', run => {
+    run.stats.maxShield *= 1.12;
+    run.stats.shieldRecharge *= 1.12;
+  }),
+  upgrade('evasion-drive', 'Привод уклонения', '+8% к скорости и -8% к откату уклонения', 165, 'uncommon', run => {
+    run.stats.speed *= 1.08;
+    run.stats.dodgeCooldownMultiplier *= .92;
+  }),
   upgrade('damage', 'Резонатор клинка', '+1 к урону меча', 250, 'rare', run => { run.stats.swordDamage += 1; }),
   upgrade('armor-cell', 'Адаптивная энергоячейка', '+1 ячейка случайному сегменту брони', 245, 'rare', run => {
     run.armorBonuses[Math.floor(Math.random() * run.armorBonuses.length)]++;
   }),
   upgrade('reflection-damage', 'Усилитель рикошета', '+1 к урону отражённых снарядов', 240, 'rare', run => { run.stats.reflectionDamage += 1; }),
+  upgrade('aegis', 'Ядро «Эгида»', '+30 к ёмкости щита и -10% к его расходу', 245, 'rare', run => {
+    run.stats.maxShield += 30;
+    run.stats.shieldDrain *= .9;
+  }),
+  upgrade('duelist', 'Матрица дуэлянта', '+10° к сектору, +8 к дальности и +10% к скорости меча', 240, 'rare', run => {
+    run.stats.swordArc += Math.PI / 18;
+    run.stats.swordRange += 8;
+    run.stats.attackSpeed *= 1.1;
+  }),
   upgrade('retaliation-charge', 'Накопитель возмездия', 'Граням нужно на 1 поглощённое попадание меньше для ответного выстрела', 175, 'uncommon', run => {
     run.stats.retaliationChargeHits = Math.max(1, run.stats.retaliationChargeHits - 1);
   }, 'retaliation'),

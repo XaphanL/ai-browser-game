@@ -41,6 +41,7 @@ export const OBJECTIVES = {
   crystalHealth: 4,
   crystalTelegraphSeconds: .9,
   crystalFireDelay: 2.8,
+  crystalSwitchDelay: 1.15,
   crystalLaserDamage: 28,
   survivalSeconds: { easy: 12, normal: 16, hard: 20 }
 };

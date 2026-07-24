@@ -271,8 +271,12 @@ function updateCrystals(state, dt) {
   if (state.objective?.type !== 'crystals' || state.phase !== 'objective') return;
   for (const crystal of state.crystals) crystal.flash = Math.max(0, crystal.flash - dt);
   const living = state.crystals.filter(crystal => crystal.health > 0);
-  for (const crystal of state.crystals) crystal.active = crystal === living[0];
-  const active = living[0];
+  let active = living.find(crystal => crystal.id === state.objective.activeCrystalId);
+  if (!active) {
+    active = living[0];
+    state.objective.activeCrystalId = active?.id ?? null;
+  }
+  for (const crystal of state.crystals) crystal.active = crystal === active;
   if (!active) return;
   if (active.telegraph > 0) {
     active.telegraph -= dt;
@@ -284,6 +288,12 @@ function updateCrystals(state, dt) {
         damagePlayerFromAngle(state, OBJECTIVES.crystalLaserDamage, active);
       }
       active.cooldown = OBJECTIVES.crystalFireDelay;
+      const alternatives = living.filter(crystal => crystal !== active);
+      if (alternatives.length) {
+        const next = alternatives[Math.floor(Math.random() * alternatives.length)];
+        state.objective.activeCrystalId = next.id;
+        next.cooldown = Math.min(next.cooldown, OBJECTIVES.crystalSwitchDelay);
+      }
     }
     return;
   }

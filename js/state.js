@@ -138,7 +138,8 @@ export function createGameState(room, run) {
     objective: objectiveType ? {
       type: objectiveType,
       timer: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0,
-      required: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0
+      required: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0,
+      activeCrystalId: objectiveType === 'crystals' ? 0 : null
     } : null,
     elapsed: 0,
     player: {
