@@ -24,6 +24,20 @@ function drawCapture(ctx, state) {
   ctx.beginPath(); ctx.arc(capture.x, capture.y, capture.radius + 12, -.5 * Math.PI, (-.5 + ratio * 2) * Math.PI); ctx.stroke();
   ctx.fillStyle = '#dcecff'; ctx.font = '700 13px monospace'; ctx.textAlign = 'center';
   ctx.fillText(state.phase === 'escape' ? 'ГОТОВО' : `${Math.round(ratio * 100)}%`, capture.x, capture.y + 5);
+  if (capture.hazard > 0) {
+    ctx.strokeStyle = capture.hazardWarning > 0 ? '#ff5d7a88' : '#ff5d7a';
+    ctx.lineWidth = capture.hazardWarning > 0 ? 4 : 9;
+    ctx.beginPath(); ctx.arc(capture.x, capture.y, capture.radius - 5, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+function drawReinforcementWarning(ctx, state) {
+  const wave = state.reinforcements;
+  if (!wave?.portal || wave.warning <= 0) return;
+  const pulse = 20 + Math.sin(state.elapsed * 22) * 7;
+  ctx.strokeStyle = '#ff5d7a'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(wave.portal.x, wave.portal.y, pulse, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#ff5d7a44'; ctx.beginPath(); ctx.arc(wave.portal.x, wave.portal.y, 30, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawCrystals(ctx, state) {
@@ -267,9 +281,15 @@ function drawEffects(ctx, effects) {
   for (const effect of effects) {
     const progress = 1 - effect.life / effect.maxLife;
     const explosion = effect.type === 'explosion';
-    ctx.strokeStyle = explosion ? `rgba(255, 93, 122, ${1 - progress})` : `rgba(176, 255, 241, ${1 - progress})`;
+    const kill = effect.type === 'kill';
+    ctx.strokeStyle = explosion ? `rgba(255, 93, 122, ${1 - progress})`
+      : (kill ? `rgba(255, 209, 102, ${1 - progress})` : `rgba(176, 255, 241, ${1 - progress})`);
     ctx.lineWidth = (explosion ? 9 : 5) * (1 - progress);
     ctx.beginPath(); ctx.arc(effect.x, effect.y, 8 + progress * (explosion ? 62 : 28), 0, Math.PI * 2); ctx.stroke();
+    if (effect.type === 'dash' && Number.isFinite(effect.fromX)) {
+      ctx.strokeStyle = `rgba(97, 246, 210, ${(1 - progress) * .7})`; ctx.lineWidth = 12 * (1 - progress);
+      ctx.beginPath(); ctx.moveTo(effect.fromX, effect.fromY); ctx.lineTo(effect.x, effect.y); ctx.stroke();
+    }
     if (explosion) {
       ctx.fillStyle = `rgba(255, 189, 89, ${(1 - progress) * .45})`;
       ctx.beginPath(); ctx.arc(effect.x, effect.y, 34 * (1 - progress), 0, Math.PI * 2); ctx.fill();
@@ -282,7 +302,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawReinforcementWarning(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;

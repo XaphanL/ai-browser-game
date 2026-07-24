@@ -1,6 +1,6 @@
 export function createInput(canvas) {
-  const input = { keys: new Set(), shield: false, attack: false, ability: false, aimX: null, aimY: null };
-  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyF', 'KeyE']);
+  const input = { keys: new Set(), shield: false, attack: false, ability: false, dodge: false, aimX: null, aimY: null };
+  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyF', 'KeyE', 'ShiftLeft', 'ShiftRight']);
 
   addEventListener('keydown', event => {
     if (movementKeys.has(event.code)) event.preventDefault();
@@ -8,14 +8,16 @@ export function createInput(canvas) {
     if (event.code === 'Space') input.shield = true;
     if (event.code === 'KeyF') input.attack = true;
     if (event.code === 'KeyE') input.ability = true;
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') input.dodge = true;
   });
   addEventListener('keyup', event => {
     input.keys.delete(event.code);
     if (event.code === 'Space') input.shield = false;
     if (event.code === 'KeyF') input.attack = false;
     if (event.code === 'KeyE') input.ability = false;
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') input.dodge = false;
   });
-  addEventListener('blur', () => { input.keys.clear(); input.shield = false; input.attack = false; input.ability = false; });
+  addEventListener('blur', () => { input.keys.clear(); input.shield = false; input.attack = false; input.ability = false; input.dodge = false; });
 
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect();
@@ -58,6 +60,11 @@ export function createInput(canvas) {
   abilityButton.addEventListener('pointerdown', setAbility(true));
   abilityButton.addEventListener('pointerup', setAbility(false));
   abilityButton.addEventListener('pointercancel', setAbility(false));
+  const dodgeButton = document.querySelector('#dodge-button');
+  const setDodge = value => event => { event.preventDefault(); input.dodge = value; };
+  dodgeButton.addEventListener('pointerdown', setDodge(true));
+  dodgeButton.addEventListener('pointerup', setDodge(false));
+  dodgeButton.addEventListener('pointercancel', setDodge(false));
   return input;
 }
 

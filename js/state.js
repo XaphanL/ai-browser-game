@@ -9,7 +9,7 @@ function makeTurrets(count, obstacles, startId = 0) {
   const available = Array.from({ length: turretPositions.length }, (_, index) => turretPositions[(index + offset) % turretPositions.length])
     .filter(([x, y]) => !obstacles.some(item => overlapsRect({ x, y }, 18, item, 12)));
   return available.slice(0, count).map((position, index) => {
-    return { id: startId + index, type: 'turret', x: position[0], y: position[1], radius: 18, health: 3, cooldown: .5 + Math.random(), flash: 0 };
+    return { id: startId + index, type: 'turret', x: position[0], y: position[1], radius: 18, health: 2, maxHealth: 2, cooldown: .5 + Math.random(), flash: 0 };
   });
 }
 
@@ -158,12 +158,14 @@ export function createGameState(room, run) {
       attackHits: [],
       reflectionFlash: 0,
       abilityPressed: false,
+      dodgePressed: false,
+      dodgeCooldown: 0,
       armor: Array.from({ length: PLAYER.armorSides }, (_, index) => {
         const maxCells = PLAYER.armorCells + run.armorBonuses[index] + (run.module === 'retaliation' ? 1 : 0);
         return { cells: maxCells, maxCells, charge: 0 };
       })
     },
-    capture: objectiveType === 'capture' ? { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds } : null,
+    capture: objectiveType === 'capture' ? { x: WORLD.width / 2, y: WORLD.height / 2, radius: 64, progress: 0, required: rules.captureSeconds, nextPulse: .34, hazard: 0, hazardWarning: 0 } : null,
     crystals,
     laser: null,
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
@@ -173,6 +175,9 @@ export function createGameState(room, run) {
     pickups: [],
     projectiles: [],
     effects: [],
+    reinforcements: (!isBossRoom && !isMerchantRoom && objectiveType !== 'capture') ? {
+      timer: 3.2, wavesLeft: difficulty === 'hard' ? 2 : 1, warning: 0, portal: null
+    } : null,
     exits: isBossRoom ? [] : Object.entries(room.neighbors).map(([side, targetId]) => ({
       side, targetId, difficulty: run.maze.rooms.get(targetId).difficulty, ...EXIT_GEOMETRY[side]
     })),

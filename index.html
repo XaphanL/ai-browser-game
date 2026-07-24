@@ -18,6 +18,7 @@
         <span id="armor" title="Целые грани брони">Броня: 8/8</span>
         <div id="armor-cells" class="armor-cells" aria-label="Энергоячейки сегментов брони"></div>
         <span id="score">Очки: 0</span>
+        <span id="momentum">Натиск: —</span>
       </div>
       <div id="status" class="status">Найдите точку захвата</div>
       <div class="minimap-panel" aria-label="Пройденный путь">
@@ -52,6 +53,7 @@
         <button data-direction="right" aria-label="Вправо">▶</button>
       </div>
       <div class="action-buttons">
+        <button id="dodge-button" class="ability-button" type="button">УКЛОН</button>
         <button id="ability-button" class="ability-button" type="button">МОДУЛЬ</button>
         <button id="attack-button" class="attack-button" type="button">МЕЧ</button>
         <button id="shield-button" class="shield-button" type="button">ЩИТ</button>
@@ -64,6 +66,7 @@
       <span>F / ЛКМ — удар мечом</span>
       <span>Пробел / ПКМ — активировать щит</span>
       <span>E — способность модуля</span>
+      <span>Shift — уклонение</span>
     </footer>
   </main>
   <script type="module" src="js/main.js"></script>

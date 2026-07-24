@@ -6,6 +6,7 @@ export function createUi() {
   const armor = document.querySelector('#armor');
   const armorCells = document.querySelector('#armor-cells');
   const score = document.querySelector('#score');
+  const momentum = document.querySelector('#momentum');
   const status = document.querySelector('#status');
   const message = document.querySelector('#message');
   const arena = document.querySelector('#arena-number');
@@ -18,6 +19,9 @@ export function createUi() {
       shield.value = state.player.shield;
       shield.max = state.run.stats.maxShield;
       score.textContent = `Очки: ${state.run.score}`;
+      momentum.textContent = state.run.momentum.stacks
+        ? `Натиск: ×${state.run.momentum.stacks} · ${state.run.momentum.timer.toFixed(1)}с`
+        : 'Натиск: —';
       const cells = state.player.armor.reduce((sum, facet) => sum + facet.cells, 0);
       const maxCells = state.player.armor.reduce((sum, facet) => sum + facet.maxCells, 0);
       armor.textContent = `Броня: ${cells}/${maxCells}`;
@@ -33,13 +37,13 @@ export function createUi() {
       if (state.phase === 'objective' && state.objective?.type === 'capture') {
         const inside = Math.hypot(state.player.x - state.capture.x, state.player.y - state.capture.y) < state.capture.radius;
         status.textContent = inside ? 'Захват точки' : 'Войдите в зону';
-        message.textContent = '';
+        message.textContent = state.capture.hazardWarning > 0 ? 'ИМПУЛЬС // ПОКИНЬТЕ ЦЕНТР' : '';
       } else if (state.phase === 'escape') {
         status.textContent = 'Выберите следующую арену';
         message.textContent = 'ЗАДАНИЕ ВЫПОЛНЕНО // ВЫХОДЫ ОТКРЫТЫ';
       } else if (state.phase === 'objective' && state.objective?.type === 'clear') {
         status.textContent = `Зачистите комнату: ${state.turrets.length}`;
-        message.textContent = 'УНИЧТОЖЬТЕ ВСЕХ ПРОТИВНИКОВ';
+        message.textContent = state.reinforcements?.warning > 0 ? 'ПОДКРЕПЛЕНИЕ // ЗОНА ВЫСАДКИ' : 'УНИЧТОЖЬТЕ ВСЕХ ПРОТИВНИКОВ';
       } else if (state.phase === 'objective' && state.objective?.type === 'crystals') {
         status.textContent = `Энергокристаллы: ${state.crystals.filter(item => item.health > 0).length}`;
         message.textContent = 'ЛАЗЕР ПЕРЕКРЫВАЮТ ПРОЧНЫЕ БАРЬЕРЫ';

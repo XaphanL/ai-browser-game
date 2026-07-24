@@ -31,8 +31,8 @@ export const UPGRADES = [
   }, 'retaliation'),
   upgrade('retaliation-damage', 'Карательная боеголовка', '+1 к урону самонаводящихся пуль «Возмездия»', 245, 'rare', run => { run.stats.homingDamage += 1; }, 'retaliation'),
   upgrade('dash-distance', 'Форсаж импульса', '+35 к дистанции рывка', 165, 'uncommon', run => { run.stats.dashDistance += 35; }, 'dash'),
-  upgrade('dash-refund', 'Рекуператор импульса', '35% шанс не тратить ячейку при рывке', 235, 'rare', run => {
-    run.stats.dashRefundChance = Math.min(.8, run.stats.dashRefundChance + .35);
+  upgrade('dash-refund', 'Рекуператор импульса', '-20% к откату атакующего уклонения', 235, 'rare', run => {
+    run.stats.dodgeCooldownMultiplier *= .8;
   }, 'dash'),
   upgrade('vampire-repair', 'Голодный сплав', '+4 к ремонту корпуса за убийство мечом', 165, 'uncommon', run => { run.stats.vampireSwordHeal += 4; }, 'vampire'),
   upgrade('vampire-harvest', 'Глубокий дренаж', 'Любое убийство дополнительно ремонтирует 4 прочности корпуса', 235, 'rare', run => { run.stats.vampireKillHeal += 4; }, 'vampire')
@@ -40,7 +40,7 @@ export const UPGRADES = [
 
 export const MODULES = [
   { id: 'retaliation', title: 'Модуль «Возмездие»', description: 'Добавляет каждой грани +1 энергоячейку. Грани копят заряд от попаданий, а способность выпускает самонаводящиеся пули.', price: 400 },
-  { id: 'dash', title: 'Модуль «Импульс»', description: 'Меч наносит +1 урон. Способность делает рывок к курсору, расходуя одну энергетическую ячейку.', price: 400 },
+  { id: 'dash', title: 'Модуль «Импульс»', description: 'Меч наносит +1 урон, а базовое уклонение становится длиннее и наносит урон врагам на пути.', price: 400 },
   { id: 'vampire', title: 'Модуль «Вампиризм»', description: 'Убийства восстанавливают ячейку брони, а убийства мечом дополнительно ремонтируют корпус.', price: 400 }
 ];
 
@@ -55,6 +55,8 @@ export function createRunState() {
     roomStates: new Map(),
     upgrades: [],
     module: null,
+    roomsSinceShop: 0,
+    momentum: { stacks: 0, timer: 0 },
     armorBonuses: Array(PLAYER.armorSides).fill(0),
     merchantPurchased: new Set(),
     stats: {
@@ -62,7 +64,7 @@ export function createRunState() {
       swordDamage: PLAYER.swordDamage, swordRange: PLAYER.swordRange, swordArc: PLAYER.swordArc, attackSpeed: 1,
       maxShield: PLAYER.maxShield, shieldRecharge: PLAYER.shieldRecharge, shieldDrain: PLAYER.shieldDrain,
       reflectionDamage: 1, retaliationChargeHits: PLAYER.armorChargeHits, homingDamage: 1,
-      dashDistance: PLAYER.dashDistance, dashRefundChance: 0, vampireSwordHeal: 8, vampireKillHeal: 0
+      dashDistance: PLAYER.dashDistance, dodgeCooldownMultiplier: 1, vampireSwordHeal: 8, vampireKillHeal: 0
     }
   };
   run.merchantOffers = drawOffers(3, run);

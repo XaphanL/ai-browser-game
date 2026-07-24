@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, SPAWNERS, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, MOMENTUM, OBJECTIVES, OBSTACLES, PLAYER, REINFORCEMENTS, SPAWNERS, WORLD } from './config.js';
 import { movementVector } from './input.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -66,10 +66,37 @@ function updatePlayer(state, input, dt) {
   player.shield = clamp(player.shield + (player.shieldActive ? -state.run.stats.shieldDrain : state.run.stats.shieldRecharge) * dt, 0, state.run.stats.maxShield);
   player.hitFlash = Math.max(0, player.hitFlash - dt);
   player.reflectionFlash = Math.max(0, player.reflectionFlash - dt);
+  player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
+  const dodgeStarted = input.dodge && !player.dodgePressed;
+  player.dodgePressed = input.dodge;
+  if (dodgeStarted && player.dodgeCooldown <= 0) dodge(state, movement);
   const abilityStarted = input.ability && !player.abilityPressed;
   player.abilityPressed = input.ability;
   if (abilityStarted) activateModule(state);
   return shieldStarted;
+}
+
+function dodge(state, movement) {
+  const player = state.player;
+  const angle = movement.moving ? Math.atan2(movement.y, movement.x) : player.aim;
+  const distanceToTravel = state.run.module === 'dash' ? state.run.stats.dashDistance : PLAYER.dodgeDistance;
+  const from = { x: player.x, y: player.y };
+  const steps = Math.ceil(distanceToTravel / 12);
+  for (let step = 0; step < steps; step++) {
+    const before = { x: player.x, y: player.y };
+    moveWithObstacles(player, Math.cos(angle) * distanceToTravel / steps, Math.sin(angle) * distanceToTravel / steps, state);
+    if (before.x === player.x && before.y === player.y) break;
+  }
+  player.dodgeCooldown = PLAYER.dodgeCooldown * state.run.stats.dodgeCooldownMultiplier;
+  player.shieldActive = false;
+  state.effects.push({ type: 'dash', x: player.x, y: player.y, fromX: from.x, fromY: from.y, life: .25, maxLife: .25 });
+  if (state.run.module !== 'dash') return;
+  for (const enemy of state.turrets) {
+    if (enemy.health <= 0 || distanceToSegment(enemy, from, player) > enemy.radius + player.radius) continue;
+    enemy.health -= 1;
+    enemy.lastHit = 'module';
+    enemy.flash = .12;
+  }
 }
 
 function chooseHomingTarget(state, assigned) {
@@ -83,13 +110,7 @@ function chooseHomingTarget(state, assigned) {
 function activateModule(state) {
   const player = state.player;
   if (state.run.module === 'dash') {
-    const facet = player.armor.find(item => item.cells > 0);
-    if (!facet) return;
-    if (Math.random() >= state.run.stats.dashRefundChance) facet.cells--;
-    const angle = inputAimAngle(player);
-    player.x = clamp(player.x + Math.cos(angle) * state.run.stats.dashDistance, WORLD.margin, WORLD.width - WORLD.margin);
-    player.y = clamp(player.y + Math.sin(angle) * state.run.stats.dashDistance, WORLD.margin, WORLD.height - WORLD.margin);
-    state.effects.push({ type: 'dash', x: player.x, y: player.y, life: .25, maxLife: .25 });
+    return;
   } else if (state.run.module === 'retaliation') {
     const assigned = new Map();
     for (const bullet of state.projectiles.filter(item => item.homing)) {
@@ -107,10 +128,6 @@ function activateModule(state) {
       });
     }
   }
-}
-
-function inputAimAngle(player) {
-  return player.aim;
 }
 
 function updateSwordAttack(state) {
@@ -171,7 +188,24 @@ function updateSwordAttack(state) {
 function updateCapture(state, dt, events) {
   if (state.phase !== 'objective') return;
   const inside = distance(state.player, state.capture) <= state.capture.radius - state.player.radius / 2;
-  state.capture.progress = clamp(state.capture.progress + (inside ? dt : -dt * .45), 0, state.capture.required);
+  const momentumBoost = 1 + state.run.momentum.stacks * MOMENTUM.capturePerStack;
+  const safeInside = inside && state.capture.hazard <= 0;
+  state.capture.progress = clamp(state.capture.progress + (safeInside ? dt * momentumBoost : -dt * .3), 0, state.capture.required);
+  const ratio = state.capture.progress / state.capture.required;
+  state.capture.hazardWarning = Math.max(0, state.capture.hazardWarning - dt);
+  state.capture.hazard = Math.max(0, state.capture.hazard - dt);
+  if (ratio >= state.capture.nextPulse && state.capture.nextPulse < 1) {
+    state.capture.nextPulse += .33;
+    state.capture.hazardWarning = .65;
+    state.capture.hazard = 1.15;
+    state.effects.push({ type: 'spawn', x: state.capture.x, y: state.capture.y, life: .65, maxLife: .65 });
+    const type = state.capture.nextPulse > .7 ? 'swordsman' : 'drone';
+    spawnEnemyAtStation(state, { id: `capture-${state.capture.nextPulse}`, enemyType: type, x: state.capture.x, y: state.capture.y, radius: state.capture.radius });
+  }
+  if (state.capture.hazard > 0 && state.capture.hazardWarning <= 0 && inside) {
+    damagePlayerFromAngle(state, 18, state.capture);
+    state.capture.hazard = 0;
+  }
   if (state.capture.progress >= state.capture.required) {
     completeObjective(state, events);
   }
@@ -269,7 +303,7 @@ function updateObjective(state, dt, events) {
   if (type === 'survive') {
     state.objective.timer = Math.max(0, state.objective.timer - dt);
     if (state.objective.timer === 0) completeObjective(state, events);
-  } else if (type === 'clear' && state.turrets.length === 0) {
+  } else if (type === 'clear' && state.turrets.length === 0 && (!state.reinforcements || state.reinforcements.wavesLeft === 0)) {
     completeObjective(state, events);
   } else if (type === 'hunt' && !state.turrets.some(enemy => enemy.marked)) {
     completeObjective(state, events);
@@ -314,6 +348,42 @@ function damagePlayerFromAngle(state, damage, source) {
     player.health -= damage * state.run.stats.damageTaken;
   }
   player.hitFlash = .16;
+  resetMomentum(state);
+}
+
+function resetMomentum(state) {
+  state.run.momentum.stacks = 0;
+  state.run.momentum.timer = 0;
+}
+
+function updateMomentum(state, dt) {
+  const momentum = state.run.momentum;
+  momentum.timer = Math.max(0, momentum.timer - dt);
+  if (momentum.timer === 0) momentum.stacks = 0;
+}
+
+function updateReinforcements(state, dt) {
+  const wave = state.reinforcements;
+  if (!wave || state.phase !== 'objective' || wave.wavesLeft <= 0) return;
+  if (wave.warning > 0) {
+    wave.warning -= dt;
+    if (wave.warning > 0) return;
+    const count = state.difficulty === 'hard' ? 3 : 2;
+    for (let index = 0; index < count; index++) {
+      spawnEnemyAtStation(state, {
+        id: `wave-${wave.wavesLeft}-${index}`, enemyType: index % 2 ? 'swordsman' : 'drone',
+        x: wave.portal.x, y: wave.portal.y, radius: 24
+      });
+    }
+    wave.wavesLeft--;
+    wave.timer = REINFORCEMENTS.waveGap;
+    return;
+  }
+  wave.timer -= dt;
+  if (wave.timer > 0) return;
+  const portals = [{ x: 100, y: 300 }, { x: 860, y: 300 }, { x: 480, y: 85 }, { x: 480, y: 515 }];
+  wave.portal = portals[Math.floor(Math.random() * portals.length)];
+  wave.warning = REINFORCEMENTS.warning;
 }
 
 function segmentHitsExpandedRect(from, to, obstacle, padding) {
@@ -499,6 +569,7 @@ function absorbWithArmor(projectile, state) {
   if (state.run.module === 'retaliation') armorFacet.charge++;
   player.hitFlash = .1;
   projectile.life = 0;
+  resetMomentum(state);
   return true;
 }
 
@@ -526,6 +597,7 @@ function updateProjectiles(state, dt, events) {
         if (!absorbWithArmor(bullet, state) && distance(bullet, state.player) < bullet.radius + state.player.radius) {
           state.player.health -= bullet.damage * state.run.stats.damageTaken;
           state.player.hitFlash = .16;
+          resetMomentum(state);
           bullet.life = 0;
         }
       }
@@ -568,14 +640,19 @@ function updateProjectiles(state, dt, events) {
         : (turret.type === 'swordsman' ? ECONOMY.swordsmanReward
           : (turret.type === 'drone' ? ECONOMY.droneReward : ECONOMY.turretReward));
       turret.rewarded = true;
-      state.run.score += reward;
+      const momentum = state.run.momentum;
+      momentum.stacks = Math.min(MOMENTUM.maxStacks, momentum.stacks + 1);
+      momentum.timer = MOMENTUM.window;
+      const totalReward = Math.round(reward * (1 + (momentum.stacks - 1) * MOMENTUM.rewardPerStack));
+      state.run.score += totalReward;
       if (state.run.module === 'vampire') {
         const damaged = state.player.armor.filter(facet => facet.cells < facet.maxCells);
         if (damaged.length) damaged[Math.floor(Math.random() * damaged.length)].cells++;
         const repair = state.run.stats.vampireKillHeal + (turret.lastHit === 'sword' ? state.run.stats.vampireSwordHeal : 0);
         state.player.health = Math.min(state.run.stats.maxHealth, state.player.health + repair);
       }
-      events.push({ type: 'enemyKilled', reward });
+      state.effects.push({ type: 'kill', x: turret.x, y: turret.y, life: .32, maxLife: .32 });
+      events.push({ type: 'enemyKilled', reward: totalReward });
     }
   }
   state.turrets = state.turrets.filter(turret => turret.health > 0);
@@ -627,6 +704,7 @@ export function updateGame(state, input, dt) {
   const events = [];
   if (state.phase === 'defeat' || state.phase === 'victory' || state.phase === 'shop') return events;
   state.elapsed += dt;
+  updateMomentum(state, dt);
   const shieldStarted = updatePlayer(state, input, dt);
   if (state.merchant && shieldStarted && distance(state.player, state.merchant) <= state.merchant.interactionRadius) {
     state.player.shieldActive = false;
@@ -638,6 +716,7 @@ export function updateGame(state, input, dt) {
   updateMobileEnemies(state, dt);
   updateProjectiles(state, dt, events);
   updateObjective(state, dt, events);
+  updateReinforcements(state, dt);
   updateSpawners(state, dt);
   updateEffects(state, dt);
   checkExits(state, events);

@@ -32,6 +32,7 @@ function clearInput() {
   input.shield = false;
   input.attack = false;
   input.ability = false;
+  input.dodge = false;
 }
 
 function playerSnapshot(player) {
@@ -100,7 +101,7 @@ function enterRoom(targetId, exitSide) {
   const target = run.maze.rooms.get(targetId);
   state = run.roomStates.get(targetId) || createGameState(target, run);
   run.roomStates.set(targetId, state);
-  Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0, vx: 0, vy: 0 });
+  Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0, dodgeCooldown: 0, vx: 0, vy: 0 });
   placeAtEntrance(state.player, exitSide);
   ensureSafePlayerPosition();
   markTransition(run, run.currentRoomId, targetId);
@@ -187,7 +188,14 @@ function frame(time) {
     if (event.type !== 'nextArena') continue;
     if (run.visited.has(event.targetId)) enterRoom(event.targetId, event.side);
     else if (run.maze.rooms.get(event.targetId).type === 'merchant') enterRoom(event.targetId, event.side);
-    else openShop(event.targetId, event.side);
+    else {
+      const target = run.maze.rooms.get(event.targetId);
+      run.roomsSinceShop = (run.roomsSinceShop || 0) + 1;
+      if (target.type === 'boss' || run.roomsSinceShop >= 3) {
+        run.roomsSinceShop = 0;
+        openShop(event.targetId, event.side);
+      } else enterRoom(event.targetId, event.side);
+    }
   }
   renderGame(state);
   renderMinimap(run);
