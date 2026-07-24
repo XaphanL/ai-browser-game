@@ -281,7 +281,15 @@ function updateCrystals(state, dt) {
   if (!active) return;
   if (active.telegraph > 0) {
     active.telegraph -= dt;
-    state.laser = { x1: active.x, y1: active.y, x2: active.targetX, y2: active.targetY, firing: active.telegraph <= 0 };
+    const locked = active.telegraph <= OBJECTIVES.crystalLaserLockSeconds;
+    if (!locked) {
+      active.targetX = state.player.x;
+      active.targetY = state.player.y;
+    }
+    state.laser = {
+      x1: active.x, y1: active.y, x2: active.targetX, y2: active.targetY,
+      firing: active.telegraph <= 0, locked
+    };
     if (active.telegraph <= 0) {
       const target = { x: active.targetX, y: active.targetY };
       const blocked = state.obstacles.some(obstacle => segmentHitsExpandedRect(active, target, obstacle, 2));
@@ -414,6 +422,12 @@ function spawnBossMinion(state, type, side) {
   });
 }
 
+function spawnFinalReinforcementWave(state) {
+  spawnHeavyDrone(state);
+  spawnBossMinion(state, 'drone', -1);
+  spawnBossMinion(state, 'swordsman', 1);
+}
+
 function finishHeavyDroneSpawn(state) {
   const boss = state.boss;
   if (!boss.reinforcementPortal) return;
@@ -471,7 +485,12 @@ function updateBoss(state, dt) {
     }
     if (boss.laserWarning > 0) {
       boss.laserWarning -= dt;
-      state.laser = { x1: boss.x, y1: boss.y, x2: boss.laserTarget.x, y2: boss.laserTarget.y, firing: boss.laserWarning <= 0 };
+      const locked = boss.laserWarning <= BOSS.laserLockSeconds;
+      if (!locked) boss.laserTarget = { x: state.player.x, y: state.player.y };
+      state.laser = {
+        x1: boss.x, y1: boss.y, x2: boss.laserTarget.x, y2: boss.laserTarget.y,
+        firing: boss.laserWarning <= 0, locked
+      };
       if (boss.laserWarning <= 0) {
         const target = boss.laserTarget;
         const battery = state.turrets.find(enemy => enemy.bossPart === 'battery' && distanceToSegment(enemy, boss, target) <= enemy.radius + 8);
@@ -501,6 +520,7 @@ function updateBoss(state, dt) {
       if (boss.overloadWave >= 6) {
         boss.phase = 'final'; boss.phaseLabel = 'Ответный огонь'; boss.shieldOpen = false;
         boss.finalTimer = BOSS.finalClosedSeconds;
+        boss.finalVolleys = 0;
         boss.overloadGaps = [];
       } else {
         boss.overloadTimer = boss.overloadWave % 3 === 0 ? 1.7 : BOSS.overloadWaveGap;
@@ -524,8 +544,8 @@ function updateBoss(state, dt) {
   if (boss.shieldOpen) {
     const aim = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
     for (const offset of [-.38, -.19, 0, .19, .38]) bossShot(state, aim + offset, 235, 17);
-    boss.missedVolleys++;
-    if (boss.missedVolleys % 2 === 0) spawnHeavyDrone(state);
+    boss.finalVolleys++;
+    if (boss.finalVolleys % 2 === 0) spawnFinalReinforcementWave(state);
   }
 }
 
@@ -779,7 +799,6 @@ function updateProjectiles(state, dt, events) {
       if (bullet.life > 0 && state.boss?.phase === 'final' && state.boss.shieldOpen
         && distance(bullet, state.boss) < bullet.radius + state.boss.radius) {
         state.boss.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
-        state.boss.missedVolleys = 0;
         bullet.life = 0;
       }
     }

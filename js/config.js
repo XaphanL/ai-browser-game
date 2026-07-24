@@ -40,6 +40,7 @@ export const PLAYER = {
 export const OBJECTIVES = {
   crystalHealth: 4,
   crystalTelegraphSeconds: .9,
+  crystalLaserLockSeconds: .32,
   crystalFireDelay: 2.8,
   crystalSwitchDelay: 1.15,
   crystalLaserDamage: 28,
@@ -70,6 +71,6 @@ export const OBSTACLES = {
 
 export const BOSS = {
   radius: 46, health: 12, cannonHealth: 4, batteryHealth: 1,
-  fireDelay: .72, bulletSpeed: 215, laserWarning: 1.15, laserDelay: 2.4,
+  fireDelay: .72, bulletSpeed: 215, laserWarning: 1.15, laserLockSeconds: .38, laserDelay: 2.4,
   overloadWarning: .62, overloadWaveGap: .78, finalOpenSeconds: 1.4, finalClosedSeconds: 1.05
 };

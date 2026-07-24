@@ -185,7 +185,7 @@ export function createGameState(room, run) {
       laserTimer: BOSS.laserDelay, laserWarning: 0, laserTarget: null, batteriesDestroyed: 0,
       overloadTimer: 1, overloadWarning: 0, overloadGaps: [], overloadWave: 0, overloadSeries: 0,
       finalTimer: BOSS.finalClosedSeconds,
-      shieldOpen: false, missedVolleys: 0, reinforcementWarning: 0, reinforcementPortal: null
+      shieldOpen: false, finalVolleys: 0, reinforcementWarning: 0, reinforcementPortal: null
     } : null,
     turrets: [...turrets, ...mobileEnemies],
     spawners,

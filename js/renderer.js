@@ -44,8 +44,9 @@ function drawReinforcementWarning(ctx, state) {
 
 function drawCrystals(ctx, state) {
   if (state.laser) {
-    ctx.strokeStyle = state.laser.firing ? '#ffffff' : '#ff4d6d88';
-    ctx.lineWidth = state.laser.firing ? 9 : 3;
+    const blinking = state.laser.locked && Math.floor(state.elapsed * 18) % 2 === 0;
+    ctx.strokeStyle = state.laser.firing ? '#ffffff' : (blinking ? '#fff4f6' : '#ff4d6d88');
+    ctx.lineWidth = state.laser.firing ? 9 : (blinking ? 5 : 3);
     ctx.shadowBlur = 18; ctx.shadowColor = '#ff4d6d';
     ctx.beginPath(); ctx.moveTo(state.laser.x1, state.laser.y1); ctx.lineTo(state.laser.x2, state.laser.y2); ctx.stroke();
     ctx.shadowBlur = 0;
@@ -165,6 +166,22 @@ function drawTurrets(ctx, state) {
       }
       ctx.restore();
       for (let i = 0; i < turret.health; i++) { ctx.fillStyle = '#d6b7ff'; ctx.fillRect(turret.x - 8 + i * 10, turret.y + 23, 7, 3); }
+      continue;
+    }
+    if (turret.bossPart === 'battery') {
+      ctx.rotate(-angle);
+      ctx.fillStyle = turret.flash ? '#fff' : '#35194e';
+      ctx.strokeStyle = '#ff7aa5'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -24); ctx.lineTo(19, -12); ctx.lineTo(19, 12);
+      ctx.lineTo(0, 24); ctx.lineTo(-19, 12); ctx.lineTo(-19, -12);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ff4d88'; ctx.fillRect(-7, -15, 14, 30);
+      ctx.strokeStyle = '#ffd0df'; ctx.strokeRect(-7, -15, 14, 30);
+      ctx.restore();
+      for (let i = 0; i < turret.health; i++) {
+        ctx.fillStyle = '#ff7aa5'; ctx.fillRect(turret.x - 4 + i * 10, turret.y + 29, 8, 4);
+      }
       continue;
     }
     const size = turret.boss ? 58 : 30;
