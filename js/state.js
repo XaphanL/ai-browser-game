@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, SPAWNERS, WORLD } from './config.js';
 
 const turretPositions = [
   [150, 140], [810, 145], [150, 455], [810, 455], [480, 105], [480, 495]
@@ -76,6 +76,34 @@ function spawnMobileEnemies(rules, obstacles, occupied, startId) {
   return enemies;
 }
 
+function makeSpawners(objectiveType, difficulty, obstacles, occupied) {
+  if (objectiveType !== 'crystals' && objectiveType !== 'survive') return [];
+  const positions = [
+    [105, 300], [855, 300], [480, 82], [480, 518],
+    [90, 210], [870, 390], [90, 390], [870, 210],
+    [360, 72], [600, 528], [600, 72], [360, 528]
+  ];
+  const types = difficulty === 'easy'
+    ? [objectiveType === 'crystals' ? 'drone' : 'swordsman']
+    : ['drone', 'swordsman'];
+  return types.map((enemyType, index) => {
+    const position = positions.find(([x, y]) => {
+      const point = { x, y };
+      return !obstacles.some(item => overlapsRect(point, SPAWNERS.radius, item, 12))
+        && !occupied.some(item => Math.hypot(item.x - x, item.y - y) < item.radius + SPAWNERS.radius + 28);
+    });
+    if (!position) return null;
+    const station = {
+      id: `spawner-${index}`, type: enemyType === 'drone' ? 'droneStation' : 'factory', enemyType,
+      x: position[0], y: position[1], radius: SPAWNERS.radius, health: SPAWNERS.health,
+      maxHealth: SPAWNERS.health, cooldown: SPAWNERS.initialDelay[objectiveType] + index * 1.5,
+      flash: 0, destroyed: false
+    };
+    occupied.push(station);
+    return station;
+  }).filter(Boolean);
+}
+
 const EXIT_GEOMETRY = {
   left: { x: 25, y: 300, width: 50, height: 120 },
   top: { x: 480, y: 25, width: 150, height: 50 },
@@ -95,6 +123,7 @@ export function createGameState(room, run) {
     health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
   }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
   const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
+  const spawners = makeSpawners(objectiveType, difficulty, obstacles, [...turrets, ...mobileEnemies]);
   if (objectiveType === 'hunt') {
     const targets = [...mobileEnemies, ...turrets].slice(0, difficulty === 'hard' ? 3 : 2);
     for (const target of targets) target.marked = true;
@@ -139,6 +168,7 @@ export function createGameState(room, run) {
     laser: null,
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
     turrets: [...turrets, ...mobileEnemies],
+    spawners,
     obstacles,
     pickups: [],
     projectiles: [],
@@ -147,6 +177,7 @@ export function createGameState(room, run) {
       side, targetId, difficulty: run.maze.rooms.get(targetId).difficulty, ...EXIT_GEOMETRY[side]
     })),
     nextProjectileId: 1,
+    nextEnemyId: turrets.length + mobileEnemies.length,
     run
   };
 }

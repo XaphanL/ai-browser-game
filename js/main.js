@@ -60,7 +60,8 @@ function playerPositionIsFree(candidate) {
     return Math.hypot(candidate.x - closestX, candidate.y - closestY) < state.player.radius + 8;
   });
   const enemyHit = state.turrets.some(enemy => enemy.health > 0 && Math.hypot(candidate.x - enemy.x, candidate.y - enemy.y) < state.player.radius + enemy.radius + 18);
-  return !obstacleHit && !enemyHit;
+  const spawnerHit = state.spawners.some(spawner => !spawner.destroyed && Math.hypot(candidate.x - spawner.x, candidate.y - spawner.y) < state.player.radius + spawner.radius + 18);
+  return !obstacleHit && !enemyHit && !spawnerHit;
 }
 
 function ensureSafePlayerPosition() {

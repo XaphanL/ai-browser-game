@@ -48,6 +48,14 @@ export const ENEMIES = {
   drone: { radius: 11, health: 1, speed: 142, attackRange: 27, cooldown: .7, damage: 12, strafe: 42 }
 };
 
+export const SPAWNERS = {
+  health: 30,
+  radius: 29,
+  initialDelay: { crystals: 5.5, survive: 4.5 },
+  interval: { easy: 10, normal: 8, hard: 6.5 },
+  maxAlivePerSpawner: { easy: 1, normal: 2, hard: 3 }
+};
+
 export const OBSTACLES = {
   destructibleHealth: 2,
   energyDropChance: .22

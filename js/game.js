@@ -1,4 +1,4 @@
-import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, WORLD } from './config.js';
+import { BOSS, DIFFICULTIES, ECONOMY, ENEMIES, OBJECTIVES, OBSTACLES, PLAYER, SPAWNERS, WORLD } from './config.js';
 import { movementVector } from './input.js';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -155,6 +155,17 @@ function updateSwordAttack(state) {
       player.attackHits.push(hitId);
     }
   }
+  for (const spawner of state.spawners) {
+    const hitId = `station-${spawner.id}`;
+    if (spawner.destroyed || player.attackHits.includes(hitId)) continue;
+    const angle = Math.atan2(spawner.y - player.y, spawner.x - player.x);
+    if (Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2
+      && distance(player, spawner) <= state.run.stats.swordRange + spawner.radius) {
+      spawner.health -= state.run.stats.swordDamage + (state.run.module === 'dash' ? 1 : 0);
+      spawner.flash = .12;
+      player.attackHits.push(hitId);
+    }
+  }
 }
 
 function updateCapture(state, dt, events) {
@@ -170,8 +181,56 @@ function completeObjective(state, events) {
   if (state.phase !== 'objective') return;
   state.phase = 'escape';
   state.laser = null;
+  for (const spawner of state.spawners) {
+    if (spawner.destroyed) continue;
+    spawner.destroyed = true;
+    spawner.health = 0;
+    state.effects.push({ type: 'explosion', x: spawner.x, y: spawner.y, life: .65, maxLife: .65 });
+  }
   for (const facet of state.player.armor) facet.cells = facet.maxCells;
   events.push({ type: 'objectiveComplete', objective: state.objective.type });
+}
+
+function spawnEnemyAtStation(state, spawner) {
+  const config = ENEMIES[spawner.enemyType];
+  const position = [0, Math.PI / 2, Math.PI, -Math.PI / 2].map(angle => ({
+    x: spawner.x + Math.cos(angle) * (spawner.radius + config.radius + 12),
+    y: spawner.y + Math.sin(angle) * (spawner.radius + config.radius + 12)
+  })).find(point => point.x > WORLD.margin + config.radius && point.x < WORLD.width - WORLD.margin - config.radius
+    && point.y > WORLD.margin + config.radius && point.y < WORLD.height - WORLD.margin - config.radius
+    && !state.obstacles.some(item => circleHitsObstacle(point.x, point.y, config.radius, item))
+    && distance(point, state.player) > config.radius + state.player.radius + 35
+    && !state.turrets.some(enemy => distance(point, enemy) < config.radius + enemy.radius + 12));
+  if (!position) return false;
+  state.turrets.push({
+    id: state.nextEnemyId++, type: spawner.enemyType, ...position, radius: config.radius,
+    health: config.health, maxHealth: config.health, cooldown: .55, windup: 0, flash: 0,
+    shielded: spawner.enemyType === 'swordsman', knockbackX: 0, knockbackY: 0,
+    navTimer: 0, waypoint: null, strafeSign: Math.random() < .5 ? -1 : 1,
+    movementPhase: Math.random() * Math.PI * 2, spawnedBy: spawner.id
+  });
+  state.effects.push({ type: 'spawn', x: position.x, y: position.y, life: .35, maxLife: .35 });
+  return true;
+}
+
+function updateSpawners(state, dt) {
+  for (const spawner of state.spawners) {
+    spawner.flash = Math.max(0, spawner.flash - dt);
+    if (spawner.destroyed) continue;
+    if (spawner.health <= 0) {
+      spawner.destroyed = true;
+      state.effects.push({ type: 'explosion', x: spawner.x, y: spawner.y, life: .65, maxLife: .65 });
+      continue;
+    }
+    if (state.phase !== 'objective') continue;
+    spawner.cooldown -= dt;
+    const alive = state.turrets.filter(enemy => enemy.spawnedBy === spawner.id && enemy.health > 0).length;
+    if (spawner.cooldown <= 0 && alive < SPAWNERS.maxAlivePerSpawner[state.difficulty]
+      && spawnEnemyAtStation(state, spawner)) {
+      const modeFactor = state.objective.type === 'survive' ? .9 : 1.1;
+      spawner.cooldown = SPAWNERS.interval[state.difficulty] * modeFactor * (.9 + Math.random() * .2);
+    }
+  }
 }
 
 function updateCrystals(state, dt) {
@@ -493,6 +552,14 @@ function updateProjectiles(state, dt, events) {
           break;
         }
       }
+      for (const spawner of bullet.life > 0 ? state.spawners : []) {
+        if (!spawner.destroyed && distance(bullet, spawner) < bullet.radius + spawner.radius) {
+          spawner.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
+          spawner.flash = .12;
+          bullet.life = 0;
+          break;
+        }
+      }
     }
   }
   for (const turret of state.turrets) {
@@ -571,6 +638,7 @@ export function updateGame(state, input, dt) {
   updateMobileEnemies(state, dt);
   updateProjectiles(state, dt, events);
   updateObjective(state, dt, events);
+  updateSpawners(state, dt);
   updateEffects(state, dt);
   checkExits(state, events);
   return events;

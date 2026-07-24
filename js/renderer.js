@@ -164,6 +164,36 @@ function drawTurrets(ctx, state) {
   }
 }
 
+function drawSpawners(ctx, state) {
+  for (const spawner of state.spawners) {
+    if (spawner.destroyed) continue;
+    ctx.save(); ctx.translate(spawner.x, spawner.y);
+    ctx.fillStyle = spawner.flash ? '#fff' : (spawner.type === 'droneStation' ? '#805d24' : '#3f3160');
+    ctx.strokeStyle = spawner.type === 'droneStation' ? '#ffbd59' : '#c6a2ff';
+    ctx.lineWidth = 3;
+    if (spawner.type === 'droneStation') {
+      ctx.beginPath();
+      for (let index = 0; index < 6; index++) {
+        const angle = index * Math.PI / 3 - Math.PI / 2;
+        const x = Math.cos(angle) * 31;
+        const y = Math.sin(angle) * 31;
+        if (index) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeRect(-15, -5, 30, 10);
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.fillRect(-32, -25, 64, 50); ctx.strokeRect(-32, -25, 64, 50);
+      ctx.fillRect(-22, -42, 13, 18); ctx.strokeRect(-22, -42, 13, 18);
+      ctx.fillRect(5, -35, 17, 10); ctx.strokeRect(5, -35, 17, 10);
+      ctx.fillStyle = '#161124'; ctx.fillRect(-15, 3, 30, 22);
+    }
+    ctx.fillStyle = '#181225'; ctx.fillRect(-32, 38, 64, 6);
+    ctx.fillStyle = '#ff5d7a'; ctx.fillRect(-32, 38, 64 * spawner.health / spawner.maxHealth, 6);
+    ctx.restore();
+  }
+}
+
 function drawObstacles(ctx, state) {
   for (const obstacle of state.obstacles) {
     ctx.fillStyle = obstacle.flash ? '#fff' : (obstacle.destructible ? '#74543f' : '#25344c');
@@ -236,9 +266,14 @@ function drawPlayer(ctx, player, stats) {
 function drawEffects(ctx, effects) {
   for (const effect of effects) {
     const progress = 1 - effect.life / effect.maxLife;
-    ctx.strokeStyle = `rgba(176, 255, 241, ${1 - progress})`;
-    ctx.lineWidth = 5 * (1 - progress);
-    ctx.beginPath(); ctx.arc(effect.x, effect.y, 8 + progress * 28, 0, Math.PI * 2); ctx.stroke();
+    const explosion = effect.type === 'explosion';
+    ctx.strokeStyle = explosion ? `rgba(255, 93, 122, ${1 - progress})` : `rgba(176, 255, 241, ${1 - progress})`;
+    ctx.lineWidth = (explosion ? 9 : 5) * (1 - progress);
+    ctx.beginPath(); ctx.arc(effect.x, effect.y, 8 + progress * (explosion ? 62 : 28), 0, Math.PI * 2); ctx.stroke();
+    if (explosion) {
+      ctx.fillStyle = `rgba(255, 189, 89, ${(1 - progress) * .45})`;
+      ctx.beginPath(); ctx.arc(effect.x, effect.y, 34 * (1 - progress), 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 
@@ -247,7 +282,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;
