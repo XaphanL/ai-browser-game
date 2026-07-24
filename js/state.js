@@ -30,6 +30,15 @@ function makeObstacles(count) {
   });
 }
 
+function makeBossObstacles() {
+  return [
+    [250, 190, 68, 92], [710, 190, 68, 92],
+    [250, 410, 68, 92], [710, 410, 68, 92]
+  ].map(([x, y, width, height], index) => ({
+    id: `boss-cover-${index}`, x, y, width, height, destructible: false, health: Infinity
+  }));
+}
+
 function makeCrystals(difficulty) {
   const count = difficulty === 'hard' ? 4 : 3;
   const positions = [[220, 120], [740, 120], [740, 480], [220, 480]];
@@ -117,7 +126,7 @@ export function createGameState(room, run) {
   const isBossRoom = room.type === 'boss';
   const isMerchantRoom = room.type === 'merchant';
   const objectiveType = (!isBossRoom && !isMerchantRoom) ? (room.objective || 'clear') : null;
-  const obstacles = (!isBossRoom && !isMerchantRoom) ? makeObstacles(rules.obstacles) : [];
+  const obstacles = isBossRoom ? makeBossObstacles() : ((!isMerchantRoom) ? makeObstacles(rules.obstacles) : []);
   const turrets = isBossRoom ? [
     { id: 0, type: 'turret', x: 330, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: .8, flash: 0, bossPart: 'cannon' },
     { id: 1, type: 'turret', x: 630, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: 1.25, flash: 0, bossPart: 'cannon' }
@@ -174,7 +183,8 @@ export function createGameState(room, run) {
       x: WORLD.width / 2, y: 255, radius: BOSS.radius, phase: 'siege', phaseLabel: 'Осадный контур',
       health: BOSS.health, maxHealth: BOSS.health, cannonsDestroyed: 0, heavySpawned: false,
       laserTimer: BOSS.laserDelay, laserWarning: 0, laserTarget: null, batteriesDestroyed: 0,
-      overloadTimer: 1, overloadWave: 0, overloadSeries: 0, finalTimer: BOSS.finalClosedSeconds,
+      overloadTimer: 1, overloadWarning: 0, overloadGaps: [], overloadWave: 0, overloadSeries: 0,
+      finalTimer: BOSS.finalClosedSeconds,
       shieldOpen: false, missedVolleys: 0, reinforcementWarning: 0, reinforcementPortal: null
     } : null,
     turrets: [...turrets, ...mobileEnemies],

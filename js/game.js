@@ -406,6 +406,14 @@ function spawnHeavyDrone(state) {
   return true;
 }
 
+function spawnBossMinion(state, type, side) {
+  const x = side < 0 ? 105 : 855;
+  const y = 150 + Math.random() * 300;
+  spawnEnemyAtStation(state, {
+    id: `boss-${state.boss.phase}-${state.nextEnemyId}`, enemyType: type, x, y, radius: 25
+  });
+}
+
 function finishHeavyDroneSpawn(state) {
   const boss = state.boss;
   if (!boss.reinforcementPortal) return;
@@ -451,7 +459,12 @@ function updateBoss(state, dt) {
     return;
   }
   if (boss.phase === 'laser') {
+    const previousDestroyed = boss.batteriesDestroyed;
     boss.batteriesDestroyed = 4 - state.turrets.filter(enemy => enemy.bossPart === 'battery').length;
+    if (boss.batteriesDestroyed > previousDestroyed) {
+      const type = boss.batteriesDestroyed % 2 ? 'drone' : 'swordsman';
+      spawnBossMinion(state, type, boss.batteriesDestroyed % 2 ? -1 : 1);
+    }
     if (boss.batteriesDestroyed >= 4) {
       boss.phase = 'overload'; boss.phaseLabel = 'Перегрузка'; boss.overloadTimer = 1;
       state.laser = null; return;
@@ -476,18 +489,31 @@ function updateBoss(state, dt) {
     return;
   }
   if (boss.phase === 'overload') {
-    boss.overloadTimer -= dt;
-    if (boss.overloadTimer <= 0) {
-      const gap = Math.random() * Math.PI * 2;
+    if (boss.overloadWarning > 0) {
+      boss.overloadWarning -= dt;
+      if (boss.overloadWarning > 0) return;
       for (let index = 0; index < 18; index++) {
         const angle = index / 18 * Math.PI * 2;
-        if (Math.abs(normalizeAngle(angle - gap)) > .34) bossShot(state, angle, 190, 18);
+        const safe = boss.overloadGaps.some(gap => Math.abs(normalizeAngle(angle - gap)) <= .38);
+        if (!safe) bossShot(state, angle, 190, 18);
       }
       boss.overloadWave++;
       if (boss.overloadWave >= 6) {
         boss.phase = 'final'; boss.phaseLabel = 'Ответный огонь'; boss.shieldOpen = false;
         boss.finalTimer = BOSS.finalClosedSeconds;
-      } else boss.overloadTimer = boss.overloadWave % 3 === 0 ? 1.7 : BOSS.overloadWaveGap;
+        boss.overloadGaps = [];
+      } else {
+        boss.overloadTimer = boss.overloadWave % 3 === 0 ? 1.7 : BOSS.overloadWaveGap;
+      }
+      return;
+    }
+    boss.overloadTimer -= dt;
+    if (boss.overloadTimer <= 0) {
+      const firstGap = Math.random() * Math.PI * 2;
+      boss.overloadGaps = boss.overloadWave % 3 === 2
+        ? [firstGap, normalizeAngle(firstGap + Math.PI)]
+        : [firstGap];
+      boss.overloadWarning = BOSS.overloadWarning;
     }
     return;
   }

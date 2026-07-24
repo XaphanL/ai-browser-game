@@ -69,7 +69,7 @@ export const OBSTACLES = {
 };
 
 export const BOSS = {
-  radius: 46, health: 18, cannonHealth: 6, batteryHealth: 1,
+  radius: 46, health: 12, cannonHealth: 4, batteryHealth: 1,
   fireDelay: .72, bulletSpeed: 215, laserWarning: 1.15, laserDelay: 2.4,
-  overloadWaveGap: .72, finalOpenSeconds: 1.25, finalClosedSeconds: 1.05
+  overloadWarning: .62, overloadWaveGap: .78, finalOpenSeconds: 1.4, finalClosedSeconds: 1.05
 };

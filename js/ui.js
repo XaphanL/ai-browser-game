@@ -63,7 +63,9 @@ export function createUi() {
         status.textContent = `Босс: ${state.boss.phaseLabel}`;
         message.textContent = state.boss.reinforcementWarning > 0
           ? 'ТЯЖЁЛОЕ ПОДКРЕПЛЕНИЕ // ЗОНА ВЫСАДКИ'
-          : (state.boss.phase === 'final' ? 'ОТРАЖАЙТЕ ДРОБЬ В ОТКРЫТОЕ ОКНО' : 'РАЗРУШЬТЕ УЗЛЫ ЗАЩИТЫ');
+          : (state.boss.phase === 'final'
+            ? 'ОТРАЖАЙТЕ ДРОБЬ В ОТКРЫТОЕ ОКНО'
+            : (state.boss.phase === 'overload' ? 'ИЩИТЕ ПОДСВЕЧЕННУЮ ПРОРЕЗЬ' : 'РАЗРУШЬТЕ УЗЛЫ ЗАЩИТЫ'));
       } else if (state.phase === 'victory') {
         status.textContent = 'Лабиринт пройден';
         message.textContent = 'ПОБЕДА';

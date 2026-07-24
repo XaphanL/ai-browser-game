@@ -189,6 +189,19 @@ function drawTurrets(ctx, state) {
 function drawBoss(ctx, state) {
   const boss = state.boss;
   if (!boss || state.phase === 'victory') return;
+  if (boss.phase === 'overload' && boss.overloadWarning > 0) {
+    for (const gap of boss.overloadGaps) {
+      ctx.fillStyle = '#61f6d21f';
+      ctx.strokeStyle = '#61f6d2';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(boss.x, boss.y);
+      ctx.arc(boss.x, boss.y, 520, gap - .38, gap + .38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
   ctx.save(); ctx.translate(boss.x, boss.y);
   const rotation = state.elapsed * (boss.phase === 'siege' ? .35 : .15);
   ctx.rotate(rotation);
