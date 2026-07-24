@@ -205,7 +205,7 @@ function drawTurrets(ctx, state) {
 
 function drawBoss(ctx, state) {
   const boss = state.boss;
-  if (!boss || state.phase === 'victory') return;
+  if (!boss || state.phase === 'victory' || state.phase === 'descent') return;
   if (boss.phase === 'overload' && boss.overloadWarning > 0) {
     for (const gap of boss.overloadGaps) {
       ctx.fillStyle = '#61f6d21f';
@@ -238,6 +238,36 @@ function drawBoss(ctx, state) {
   ctx.fillStyle = '#231535'; ctx.fillRect(boss.x - 110, boss.y - 105, 220, 10);
   ctx.fillStyle = '#bd83ff'; ctx.fillRect(boss.x - 110, boss.y - 105, 220 * boss.health / boss.maxHealth, 10);
   ctx.strokeStyle = '#e5c7ff'; ctx.strokeRect(boss.x - 110, boss.y - 105, 220, 10);
+}
+
+function drawDescent(ctx, state) {
+  if (!state.descent) return;
+  const passage = state.descent;
+  ctx.save();
+  ctx.translate(passage.x, passage.y);
+  ctx.fillStyle = '#05070d';
+  ctx.strokeStyle = '#61f6d2';
+  ctx.lineWidth = 5;
+  ctx.shadowBlur = 22;
+  ctx.shadowColor = '#61f6d2';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, passage.radius, passage.radius * .66, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#61f6d288';
+  ctx.lineWidth = 3;
+  for (const y of [-18, 0, 18]) {
+    ctx.beginPath();
+    ctx.moveTo(-34, y);
+    ctx.lineTo(34, y);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#dcecff';
+  ctx.font = '700 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('НИЖНИЙ ЯРУС', 0, 72);
+  ctx.restore();
 }
 
 function drawSpawners(ctx, state) {
@@ -364,7 +394,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawReinforcementWarning(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawBoss(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawReinforcementWarning(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawBoss(ctx, state); drawDescent(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;

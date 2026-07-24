@@ -66,6 +66,12 @@ export function createUi() {
           : (state.boss.phase === 'final'
             ? 'ОТРАЖАЙТЕ ДРОБЬ В ОТКРЫТОЕ ОКНО'
             : (state.boss.phase === 'overload' ? 'ИЩИТЕ ПОДСВЕЧЕННУЮ ПРОРЕЗЬ' : 'РАЗРУШЬТЕ УЗЛЫ ЗАЩИТЫ'));
+      } else if (state.phase === 'descent') {
+        status.textContent = 'Страж уничтожен';
+        message.textContent = 'ВОЙДИТЕ В ПРОХОД НА НИЖНИЙ ЯРУС';
+      } else if (state.phase === 'lowerFloor') {
+        status.textContent = 'Нижний ярус';
+        message.textContent = 'ПУСТАЯ КОМНАТА // ЗАГЛУШКА';
       } else if (state.phase === 'victory') {
         status.textContent = 'Лабиринт пройден';
         message.textContent = 'ПОБЕДА';

@@ -840,11 +840,14 @@ function updateProjectiles(state, dt, events) {
     state.effects.push({ type: 'energy', x: pickup.x, y: pickup.y, life: .35, maxLife: .35 });
   }
   state.pickups = state.pickups.filter(pickup => !pickup.collected);
-  if (state.roomType === 'boss' && state.boss.health <= 0 && state.phase !== 'victory') {
+  if (state.roomType === 'boss' && state.boss.health <= 0 && state.phase === 'boss') {
     state.run.score += ECONOMY.bossReward;
-    state.phase = 'victory';
+    state.phase = 'descent';
+    state.descent = { x: state.boss.x, y: state.boss.y, radius: 58 };
+    state.turrets.length = 0;
     state.projectiles.length = 0;
-    events.push({ type: 'victory' });
+    state.laser = null;
+    events.push({ type: 'bossDefeated' });
   }
   state.projectiles = state.projectiles.filter(bullet => bullet.life > 0 && bullet.x > -20 && bullet.x < WORLD.width + 20 && bullet.y > -20 && bullet.y < WORLD.height + 20);
   if (state.player.health <= 0) {
@@ -860,6 +863,11 @@ function updateEffects(state, dt) {
 }
 
 function checkExits(state, events) {
+  if (state.phase === 'descent' && state.descent
+    && distance(state.player, state.descent) <= state.player.radius + state.descent.radius) {
+    events.push({ type: 'descend' });
+    return;
+  }
   if (state.phase !== 'escape' && state.phase !== 'merchant') return;
   for (const exit of state.exits) {
     if (Math.abs(state.player.x - exit.x) < exit.width / 2 && Math.abs(state.player.y - exit.y) < exit.height / 2) {

@@ -113,6 +113,17 @@ function enterRoom(targetId, exitSide = null, direct = false) {
   clearInput();
 }
 
+function enterLowerFloor() {
+  const snapshot = playerSnapshot(state.player);
+  const lowerFloor = {
+    id: 'lower-floor-placeholder', type: 'lowerFloor', difficulty: 'easy',
+    distance: state.arena, neighbors: {}
+  };
+  state = createGameState(lowerFloor, run);
+  Object.assign(state.player, snapshot, { x: 480, y: 495, aim: -Math.PI / 2, vx: 0, vy: 0 });
+  clearInput();
+}
+
 function reset() {
   run = createRunState();
   state = createGameState(run.maze.rooms.get(run.currentRoomId), run);
@@ -234,6 +245,10 @@ function frame(time) {
   previousTime = time;
   const events = admin.isOpen() ? [] : updateGame(state, input, dt);
   for (const event of events) {
+    if (event.type === 'descend') {
+      enterLowerFloor();
+      continue;
+    }
     if (event.type === 'merchantShop') {
       openShop(null, null, 'merchant');
       continue;

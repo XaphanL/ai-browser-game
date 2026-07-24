@@ -125,13 +125,14 @@ export function createGameState(room, run) {
   const rules = DIFFICULTIES[difficulty];
   const isBossRoom = room.type === 'boss';
   const isMerchantRoom = room.type === 'merchant';
-  const objectiveType = (!isBossRoom && !isMerchantRoom) ? (room.objective || 'clear') : null;
-  const obstacles = isBossRoom ? makeBossObstacles() : ((!isMerchantRoom) ? makeObstacles(rules.obstacles) : []);
+  const isLowerFloor = room.type === 'lowerFloor';
+  const objectiveType = (!isBossRoom && !isMerchantRoom && !isLowerFloor) ? (room.objective || 'clear') : null;
+  const obstacles = isBossRoom ? makeBossObstacles() : ((!isMerchantRoom && !isLowerFloor) ? makeObstacles(rules.obstacles) : []);
   const turrets = isBossRoom ? [
     { id: 0, type: 'turret', x: 330, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: .8, flash: 0, bossPart: 'cannon' },
     { id: 1, type: 'turret', x: 630, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: 1.25, flash: 0, bossPart: 'cannon' }
-  ] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
-  const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
+  ] : ((isMerchantRoom || isLowerFloor) ? [] : makeTurrets(rules.turrets, obstacles));
+  const mobileEnemies = (!isBossRoom && !isMerchantRoom && !isLowerFloor) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
   const spawners = makeSpawners(objectiveType, difficulty, obstacles, [...turrets, ...mobileEnemies]);
   if (objectiveType === 'hunt') {
     const targets = [...mobileEnemies, ...turrets].slice(0, difficulty === 'hard' ? 3 : 2);
@@ -142,8 +143,8 @@ export function createGameState(room, run) {
     arena: room.distance + 1,
     roomId: room.id,
     difficulty,
-    roomType: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : 'arena'),
-    phase: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : 'objective'),
+    roomType: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : (isLowerFloor ? 'lowerFloor' : 'arena')),
+    phase: isBossRoom ? 'boss' : (isMerchantRoom ? 'merchant' : (isLowerFloor ? 'lowerFloor' : 'objective')),
     objective: objectiveType ? {
       type: objectiveType,
       timer: objectiveType === 'survive' ? OBJECTIVES.survivalSeconds[difficulty] : 0,
@@ -179,6 +180,7 @@ export function createGameState(room, run) {
     crystals,
     laser: null,
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
+    descent: null,
     boss: isBossRoom ? {
       x: WORLD.width / 2, y: 255, radius: BOSS.radius, phase: 'siege', phaseLabel: 'Осадный контур',
       health: BOSS.health, maxHealth: BOSS.health, cannonsDestroyed: 0, heavySpawned: false,
@@ -196,7 +198,7 @@ export function createGameState(room, run) {
     reinforcements: (!isBossRoom && !isMerchantRoom && objectiveType !== 'capture') ? {
       timer: 3.2, wavesLeft: difficulty === 'hard' ? 2 : 1, warning: 0, portal: null
     } : null,
-    exits: isBossRoom ? [] : Object.entries(room.neighbors).map(([side, targetId]) => ({
+    exits: (isBossRoom || isLowerFloor) ? [] : Object.entries(room.neighbors).map(([side, targetId]) => ({
       side, targetId, difficulty: run.maze.rooms.get(targetId).difficulty, ...EXIT_GEOMETRY[side]
     })),
     nextProjectileId: 1,
