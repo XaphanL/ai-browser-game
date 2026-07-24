@@ -30,6 +30,7 @@
     <section class="viewport" aria-label="Игровая арена">
       <canvas id="game" width="960" height="600"></canvas>
       <div id="message" class="message" aria-live="polite"></div>
+      <button id="admin-toggle" class="admin-toggle" type="button" aria-controls="admin-menu" aria-expanded="false">ADMIN</button>
       <button id="restart" class="restart" type="button" hidden>Новый забег</button>
       <section id="shop" class="shop" aria-label="Магазин улучшений" hidden>
         <div class="shop-header">
@@ -41,6 +42,28 @@
           <button id="reroll" type="button">Рерол · 20</button>
           <button id="shop-continue" type="button">Продолжить без покупки</button>
         </div>
+      </section>
+      <section id="admin-menu" class="admin-menu" aria-label="Админ-меню тестирования" hidden>
+        <div class="admin-header">
+          <div><span class="admin-kicker">РЕЖИМ ТЕСТИРОВАНИЯ</span><h2>Админ-меню</h2></div>
+          <button id="admin-close" type="button" aria-label="Закрыть админ-меню">×</button>
+        </div>
+        <div class="admin-section">
+          <label for="admin-room">Быстрый переход по комнатам</label>
+          <div class="admin-row"><select id="admin-room"></select><button data-admin-action="room">Перейти</button></div>
+          <div class="admin-grid">
+            <button data-admin-action="boss">К боссу</button><button data-admin-action="merchant">К торговцу</button>
+            <button data-admin-action="shop">Открыть магазин</button><button data-admin-action="merchant-shop">Открыть торговца</button>
+          </div>
+        </div>
+        <div class="admin-section">
+          <span>Игрок и ресурсы</span>
+          <div class="admin-grid">
+            <button data-admin-action="score">+500 очков</button><button data-admin-action="restore">Полное восстановление</button>
+            <button data-admin-action="complete">Завершить комнату</button><button data-admin-action="reset-room">Перезапустить комнату</button>
+          </div>
+        </div>
+        <p id="admin-feedback" class="admin-feedback" aria-live="polite">Игра приостановлена</p>
       </section>
     </section>
     </div>
@@ -67,6 +90,7 @@
       <span>Пробел / ПКМ — активировать щит</span>
       <span>E — способность модуля</span>
       <span>Shift — уклонение</span>
+      <span>` — админ-меню</span>
     </footer>
   </main>
   <script type="module" src="js/main.js"></script>

@@ -99,6 +99,20 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   cursor: pointer;
 }
 
+.admin-toggle { position: absolute; right: 12px; bottom: 12px; z-index: 3; padding: 7px 10px; border: 1px solid #ff5d7a88; border-radius: 4px; background: #24111bdd; color: #ff8ca0; cursor: pointer; font-size: 10px; letter-spacing: .12em; }
+.admin-menu { position: absolute; inset: 0; z-index: 6; padding: clamp(16px, 3vw, 34px); overflow-y: auto; background: #090b15f5; }
+.admin-header, .admin-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-header h2 { margin: 3px 0 16px; font-size: clamp(22px, 4vw, 34px); }
+.admin-kicker { color: #ff738d; font-size: 10px; letter-spacing: .16em; }
+.admin-header button { width: 38px; height: 38px; border-radius: 50%; font-size: 24px; }
+.admin-section { margin-bottom: 18px; padding: 14px; border: 1px solid #3b4661; border-radius: 8px; background: #111625; }
+.admin-section > label, .admin-section > span { display: block; margin-bottom: 10px; color: #9eb3c8; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.admin-row select { min-width: 0; flex: 1; }
+.admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.admin-menu button, .admin-menu select { min-height: 40px; padding: 8px 10px; border: 1px solid #495b78; border-radius: 5px; background: #172238; color: #e5f1ff; cursor: pointer; }
+.admin-menu button:hover, .admin-menu button:focus-visible { border-color: #ff738d; }
+.admin-feedback { margin: 0; color: #61f6d2; font-size: 12px; }
+
 .shop {
   position: absolute;
   inset: 0;
@@ -162,5 +176,6 @@ canvas { display: block; width: 100%; height: auto; touch-action: none; }
   .shop-cards { grid-template-columns: 1fr; }
   .upgrade-card { min-height: 0; }
   .shop-actions { align-items: stretch; flex-direction: column; }
+  .admin-grid { grid-template-columns: 1fr; }
   .minimap-panel { grid-column: 1 / -1; width: 110px; margin: 0; justify-self: end; }
 }

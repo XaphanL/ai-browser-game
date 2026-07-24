@@ -7,6 +7,7 @@ import { ECONOMY } from './config.js';
 import { buyModule, buyUpgrade, createRunState, drawOffers, MODULES, RARITIES } from './upgrades.js';
 import { markTransition } from './maze.js';
 import { createMinimap } from './minimap.js';
+import { createAdminMenu } from './admin.js';
 
 const canvas = document.querySelector('#game');
 const input = createInput(canvas);
@@ -96,15 +97,19 @@ function syncArmorCapacity() {
 
 ensureSafePlayerPosition();
 
-function enterRoom(targetId, exitSide) {
+function enterRoom(targetId, exitSide = null, direct = false) {
   const snapshot = playerSnapshot(state.player);
   const target = run.maze.rooms.get(targetId);
   state = run.roomStates.get(targetId) || createGameState(target, run);
   run.roomStates.set(targetId, state);
   Object.assign(state.player, snapshot, { shieldActive: false, attackTimer: 0, attackCooldown: 0, dodgeCooldown: 0, vx: 0, vy: 0 });
-  placeAtEntrance(state.player, exitSide);
+  if (exitSide) placeAtEntrance(state.player, exitSide);
+  else Object.assign(state.player, { x: 480, y: 495, aim: -Math.PI / 2 });
   ensureSafePlayerPosition();
-  markTransition(run, run.currentRoomId, targetId);
+  if (direct) {
+    run.visited.add(targetId);
+    run.currentRoomId = targetId;
+  } else markTransition(run, run.currentRoomId, targetId);
   clearInput();
 }
 
@@ -115,6 +120,7 @@ function reset() {
   ensureSafePlayerPosition();
   pendingRoom = null;
   shop.hidden = true;
+  admin.close();
   clearInput();
 }
 
@@ -176,10 +182,57 @@ reroll.addEventListener('click', () => {
 shopContinue.addEventListener('click', continueRun);
 ui.restart.addEventListener('click', reset);
 
+function adminTeleport(targetId) {
+  shop.hidden = true;
+  pendingRoom = null;
+  enterRoom(targetId, null, true);
+}
+
+function restorePlayer() {
+  state.player.health = run.stats.maxHealth;
+  state.player.shield = run.stats.maxShield;
+  state.player.armor.forEach(facet => { facet.cells = facet.maxCells; facet.charge = 0; });
+}
+
+function completeRoom() {
+  if (state.roomType === 'boss') { state.boss.health = 0; return; }
+  if (state.roomType !== 'arena') return;
+  state.turrets.length = 0;
+  state.spawners.length = 0;
+  state.projectiles.length = 0;
+  state.crystals.forEach(crystal => { crystal.health = 0; });
+  if (state.capture) state.capture.progress = state.capture.required;
+  if (state.objective?.type === 'survive') state.objective.timer = 0;
+  state.reinforcements = null;
+  state.phase = 'escape';
+  restorePlayer();
+}
+
+function resetCurrentRoom() {
+  const snapshot = playerSnapshot(state.player);
+  const room = run.maze.rooms.get(run.currentRoomId);
+  state = createGameState(room, run);
+  run.roomStates.set(room.id, state);
+  Object.assign(state.player, snapshot, { health: run.stats.maxHealth, shield: run.stats.maxShield, vx: 0, vy: 0 });
+  state.player.armor.forEach(facet => { facet.cells = facet.maxCells; facet.charge = 0; });
+  ensureSafePlayerPosition();
+  clearInput();
+}
+
+const admin = createAdminMenu({
+  getRun: () => run,
+  teleport: adminTeleport,
+  openUpgradeShop: () => openShop(null, null),
+  openMerchantShop: () => openShop(null, null, 'merchant'),
+  restorePlayer,
+  completeRoom,
+  resetRoom: resetCurrentRoom
+});
+
 function frame(time) {
   const dt = Math.min((time - previousTime) / 1000, .033);
   previousTime = time;
-  const events = updateGame(state, input, dt);
+  const events = admin.isOpen() ? [] : updateGame(state, input, dt);
   for (const event of events) {
     if (event.type === 'merchantShop') {
       openShop(null, null, 'merchant');
