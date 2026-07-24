@@ -48,7 +48,8 @@ export const OBJECTIVES = {
 
 export const ENEMIES = {
   swordsman: { radius: 17, health: 2, speed: 112, shieldRadius: 24, attackRange: 43, windup: .58, cooldown: .95, damage: 24, strafe: 28 },
-  drone: { radius: 11, health: 1, speed: 172, attackRange: 27, cooldown: .58, damage: 12, strafe: 48 }
+  drone: { radius: 11, health: 1, speed: 172, attackRange: 27, cooldown: .58, damage: 12, strafe: 48 },
+  heavyDrone: { radius: 22, health: 8, speed: 76, attackRange: 34, windup: .9, cooldown: 1.7, damage: 28, strafe: 18 }
 };
 
 export const MOMENTUM = { window: 3.2, maxStacks: 8, capturePerStack: .1, rewardPerStack: .12 };
@@ -68,8 +69,7 @@ export const OBSTACLES = {
 };
 
 export const BOSS = {
-  radius: 38,
-  health: 24,
-  fireDelay: .72,
-  bulletSpeed: 215
+  radius: 46, health: 18, cannonHealth: 6, batteryHealth: 1,
+  fireDelay: .72, bulletSpeed: 215, laserWarning: 1.15, laserDelay: 2.4,
+  overloadWaveGap: .72, finalOpenSeconds: 1.25, finalClosedSeconds: 1.05
 };

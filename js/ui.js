@@ -60,8 +60,10 @@ export function createUi() {
         status.textContent = 'Комната торговца';
         message.textContent = 'РАЗБУДИТЕ КОТА КНОПКОЙ ЩИТА';
       } else if (state.phase === 'boss') {
-        status.textContent = 'Комната босса';
-        message.textContent = 'УНИЧТОЖЬТЕ СТРАЖА ЛАБИРИНТА';
+        status.textContent = `Босс: ${state.boss.phaseLabel}`;
+        message.textContent = state.boss.reinforcementWarning > 0
+          ? 'ТЯЖЁЛОЕ ПОДКРЕПЛЕНИЕ // ЗОНА ВЫСАДКИ'
+          : (state.boss.phase === 'final' ? 'ОТРАЖАЙТЕ ДРОБЬ В ОТКРЫТОЕ ОКНО' : 'РАЗРУШЬТЕ УЗЛЫ ЗАЩИТЫ');
       } else if (state.phase === 'victory') {
         status.textContent = 'Лабиринт пройден';
         message.textContent = 'ПОБЕДА';

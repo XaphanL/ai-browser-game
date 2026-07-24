@@ -118,10 +118,10 @@ export function createGameState(room, run) {
   const isMerchantRoom = room.type === 'merchant';
   const objectiveType = (!isBossRoom && !isMerchantRoom) ? (room.objective || 'clear') : null;
   const obstacles = (!isBossRoom && !isMerchantRoom) ? makeObstacles(rules.obstacles) : [];
-  const turrets = isBossRoom ? [{
-    id: 0, type: 'turret', x: WORLD.width / 2, y: 145, radius: BOSS.radius,
-    health: BOSS.health, maxHealth: BOSS.health, cooldown: 1.2, flash: 0, boss: true
-  }] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
+  const turrets = isBossRoom ? [
+    { id: 0, type: 'turret', x: 330, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: .8, flash: 0, bossPart: 'cannon' },
+    { id: 1, type: 'turret', x: 630, y: 260, radius: 25, health: BOSS.cannonHealth, maxHealth: BOSS.cannonHealth, cooldown: 1.25, flash: 0, bossPart: 'cannon' }
+  ] : (isMerchantRoom ? [] : makeTurrets(rules.turrets, obstacles));
   const mobileEnemies = (!isBossRoom && !isMerchantRoom) ? spawnMobileEnemies(rules, obstacles, [...turrets], turrets.length) : [];
   const spawners = makeSpawners(objectiveType, difficulty, obstacles, [...turrets, ...mobileEnemies]);
   if (objectiveType === 'hunt') {
@@ -170,6 +170,13 @@ export function createGameState(room, run) {
     crystals,
     laser: null,
     merchant: isMerchantRoom ? { x: WORLD.width / 2, y: WORLD.height / 2, interactionRadius: 92 } : null,
+    boss: isBossRoom ? {
+      x: WORLD.width / 2, y: 255, radius: BOSS.radius, phase: 'siege', phaseLabel: 'Осадный контур',
+      health: BOSS.health, maxHealth: BOSS.health, cannonsDestroyed: 0, heavySpawned: false,
+      laserTimer: BOSS.laserDelay, laserWarning: 0, laserTarget: null, batteriesDestroyed: 0,
+      overloadTimer: 1, overloadWave: 0, overloadSeries: 0, finalTimer: BOSS.finalClosedSeconds,
+      shieldOpen: false, missedVolleys: 0, reinforcementWarning: 0, reinforcementPortal: null
+    } : null,
     turrets: [...turrets, ...mobileEnemies],
     spawners,
     obstacles,

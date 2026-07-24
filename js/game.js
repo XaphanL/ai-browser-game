@@ -134,6 +134,7 @@ function updateSwordAttack(state) {
   const player = state.player;
   if (player.attackTimer <= 0) return;
   for (const turret of state.turrets) {
+    if (turret.bossPart) continue;
     if (player.attackHits.includes(turret.id)) continue;
     const angle = Math.atan2(turret.y - player.y, turret.x - player.x);
     const inArc = Math.abs(normalizeAngle(angle - player.aim)) <= state.run.stats.swordArc / 2;
@@ -338,9 +339,9 @@ function updateTurrets(state, dt) {
     turret.flash = Math.max(0, turret.flash - dt);
     turret.cooldown -= dt;
     if (turret.cooldown <= 0 && distance(turret, state.player) < 620) {
-      const fireRules = turret.boss ? BOSS : rules;
+      const fireRules = turret.bossPart === 'cannon' ? BOSS : rules;
       fire(turret, state, fireRules);
-      turret.cooldown = fireRules.fireDelay * (.85 + Math.random() * .3);
+      turret.cooldown = fireRules.fireDelay * (.85 + Math.random() * .3) * (turret.id % 2 ? 1.35 : 1);
     }
   }
 }
@@ -394,6 +395,112 @@ function updateReinforcements(state, dt) {
   const portals = [{ x: 100, y: 300 }, { x: 860, y: 300 }, { x: 480, y: 85 }, { x: 480, y: 515 }];
   wave.portal = portals[Math.floor(Math.random() * portals.length)];
   wave.warning = REINFORCEMENTS.warning;
+}
+
+function spawnHeavyDrone(state) {
+  const boss = state.boss;
+  if (state.turrets.filter(enemy => enemy.type === 'heavyDrone' && enemy.health > 0).length >= 2) return false;
+  const portal = Math.random() < .5 ? { x: 105, y: 300 } : { x: 855, y: 300 };
+  boss.reinforcementPortal = portal;
+  boss.reinforcementWarning = REINFORCEMENTS.warning;
+  return true;
+}
+
+function finishHeavyDroneSpawn(state) {
+  const boss = state.boss;
+  if (!boss.reinforcementPortal) return;
+  const config = ENEMIES.heavyDrone;
+  state.turrets.push({
+    id: state.nextEnemyId++, type: 'heavyDrone', x: boss.reinforcementPortal.x, y: boss.reinforcementPortal.y,
+    radius: config.radius, health: config.health, maxHealth: config.health, cooldown: .8, windup: 0,
+    flash: 0, shielded: false, knockbackX: 0, knockbackY: 0, navTimer: 0, waypoint: null,
+    strafeSign: Math.random() < .5 ? -1 : 1, movementPhase: Math.random() * Math.PI * 2, bossReinforcement: true
+  });
+  state.effects.push({ type: 'spawn', ...boss.reinforcementPortal, life: .45, maxLife: .45 });
+  boss.reinforcementPortal = null;
+}
+
+function addBossBatteries(state) {
+  const positions = [[165, 125], [795, 125], [795, 475], [165, 475]];
+  for (const [x, y] of positions) state.turrets.push({
+    id: state.nextEnemyId++, type: 'turret', x, y, radius: 23, health: BOSS.batteryHealth,
+    maxHealth: BOSS.batteryHealth, cooldown: Infinity, flash: 0, bossPart: 'battery'
+  });
+}
+
+function bossShot(state, angle, speed = BOSS.bulletSpeed, damage = 16) {
+  state.projectiles.push({ id: state.nextProjectileId++, x: state.boss.x, y: state.boss.y,
+    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: 6, reflected: false, damage, life: 7 });
+}
+
+function updateBoss(state, dt) {
+  const boss = state.boss;
+  if (!boss || state.phase !== 'boss') return;
+  if (boss.reinforcementWarning > 0) {
+    boss.reinforcementWarning -= dt;
+    if (boss.reinforcementWarning <= 0) finishHeavyDroneSpawn(state);
+  }
+  const cannons = state.turrets.filter(enemy => enemy.bossPart === 'cannon');
+  const destroyedCannons = 2 - cannons.length;
+  if (boss.phase === 'siege') {
+    if (destroyedCannons >= 1 && !boss.heavySpawned) { boss.heavySpawned = spawnHeavyDrone(state); }
+    if (destroyedCannons === 2) {
+      boss.phase = 'laser'; boss.phaseLabel = 'Наведение лазера'; boss.laserTimer = 1.3;
+      addBossBatteries(state);
+    }
+    return;
+  }
+  if (boss.phase === 'laser') {
+    boss.batteriesDestroyed = 4 - state.turrets.filter(enemy => enemy.bossPart === 'battery').length;
+    if (boss.batteriesDestroyed >= 4) {
+      boss.phase = 'overload'; boss.phaseLabel = 'Перегрузка'; boss.overloadTimer = 1;
+      state.laser = null; return;
+    }
+    if (boss.laserWarning > 0) {
+      boss.laserWarning -= dt;
+      state.laser = { x1: boss.x, y1: boss.y, x2: boss.laserTarget.x, y2: boss.laserTarget.y, firing: boss.laserWarning <= 0 };
+      if (boss.laserWarning <= 0) {
+        const target = boss.laserTarget;
+        const battery = state.turrets.find(enemy => enemy.bossPart === 'battery' && distanceToSegment(enemy, boss, target) <= enemy.radius + 8);
+        if (battery) battery.health = 0;
+        else if (distanceToSegment(state.player, boss, target) <= state.player.radius + 8) damagePlayerFromAngle(state, 34, boss);
+        boss.laserTimer = BOSS.laserDelay; state.laser = null;
+      }
+    } else {
+      boss.laserTimer -= dt;
+      if (boss.laserTimer <= 0) {
+        boss.laserTarget = { x: state.player.x, y: state.player.y };
+        boss.laserWarning = BOSS.laserWarning;
+      }
+    }
+    return;
+  }
+  if (boss.phase === 'overload') {
+    boss.overloadTimer -= dt;
+    if (boss.overloadTimer <= 0) {
+      const gap = Math.random() * Math.PI * 2;
+      for (let index = 0; index < 18; index++) {
+        const angle = index / 18 * Math.PI * 2;
+        if (Math.abs(normalizeAngle(angle - gap)) > .34) bossShot(state, angle, 190, 18);
+      }
+      boss.overloadWave++;
+      if (boss.overloadWave >= 6) {
+        boss.phase = 'final'; boss.phaseLabel = 'Ответный огонь'; boss.shieldOpen = false;
+        boss.finalTimer = BOSS.finalClosedSeconds;
+      } else boss.overloadTimer = boss.overloadWave % 3 === 0 ? 1.7 : BOSS.overloadWaveGap;
+    }
+    return;
+  }
+  boss.finalTimer -= dt;
+  if (boss.finalTimer > 0) return;
+  boss.shieldOpen = !boss.shieldOpen;
+  boss.finalTimer = boss.shieldOpen ? BOSS.finalOpenSeconds : BOSS.finalClosedSeconds;
+  if (boss.shieldOpen) {
+    const aim = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
+    for (const offset of [-.38, -.19, 0, .19, .38]) bossShot(state, aim + offset, 235, 17);
+    boss.missedVolleys++;
+    if (boss.missedVolleys % 2 === 0) spawnHeavyDrone(state);
+  }
 }
 
 function segmentHitsExpandedRect(from, to, obstacle, padding) {
@@ -505,7 +612,7 @@ function updateMobileEnemies(state, dt) {
     enemy.cooldown = Math.max(0, enemy.cooldown - dt);
     const gap = distance(enemy, state.player) - enemy.radius - state.player.radius;
 
-    if (enemy.type === 'swordsman' && gap <= config.attackRange) {
+    if ((enemy.type === 'swordsman' || enemy.type === 'heavyDrone') && gap <= config.attackRange) {
       enemy.shielded = false;
       if (enemy.windup <= 0 && enemy.cooldown <= 0) enemy.windup = config.windup;
       if (enemy.windup > 0) {
@@ -538,11 +645,11 @@ function updateMobileEnemies(state, dt) {
       const moveLength = Math.hypot(moveX, moveY) || 1;
       moveX /= moveLength;
       moveY /= moveLength;
-      moveWithObstacles(enemy, moveX * speed * dt, moveY * speed * dt, state, enemy.type === 'drone');
+      moveWithObstacles(enemy, moveX * speed * dt, moveY * speed * dt, state, enemy.type === 'drone' || enemy.type === 'heavyDrone');
     }
 
     if (enemy.knockbackX || enemy.knockbackY) {
-      moveWithObstacles(enemy, enemy.knockbackX * dt, enemy.knockbackY * dt, state, enemy.type === 'drone');
+      moveWithObstacles(enemy, enemy.knockbackX * dt, enemy.knockbackY * dt, state, enemy.type === 'drone' || enemy.type === 'heavyDrone');
       const decay = Math.max(0, 1 - dt * 7);
       enemy.knockbackX *= decay;
       enemy.knockbackY *= decay;
@@ -618,6 +725,7 @@ function updateProjectiles(state, dt, events) {
     }
     if (bullet.reflected) {
       for (const turret of state.turrets) {
+        if (turret.bossPart === 'battery') continue;
         if (distance(bullet, turret) < bullet.radius + turret.radius) {
           if (!turret.shielded) turret.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
           turret.lastHit = bullet.homing ? 'module' : 'reflection';
@@ -642,13 +750,18 @@ function updateProjectiles(state, dt, events) {
           break;
         }
       }
+      if (bullet.life > 0 && state.boss?.phase === 'final' && state.boss.shieldOpen
+        && distance(bullet, state.boss) < bullet.radius + state.boss.radius) {
+        state.boss.health -= bullet.homing ? bullet.damage : state.run.stats.reflectionDamage;
+        state.boss.missedVolleys = 0;
+        bullet.life = 0;
+      }
     }
   }
   for (const turret of state.turrets) {
     if (!turret.rewarded && turret.health <= 0) {
-      const reward = turret.boss ? ECONOMY.bossReward
-        : (turret.type === 'swordsman' ? ECONOMY.swordsmanReward
-          : (turret.type === 'drone' ? ECONOMY.droneReward : ECONOMY.turretReward));
+      const reward = turret.type === 'swordsman' ? ECONOMY.swordsmanReward
+        : (turret.type === 'drone' ? ECONOMY.droneReward : ECONOMY.turretReward);
       turret.rewarded = true;
       const momentum = state.run.momentum;
       momentum.stacks = Math.min(MOMENTUM.maxStacks, momentum.stacks + 1);
@@ -682,7 +795,8 @@ function updateProjectiles(state, dt, events) {
     state.effects.push({ type: 'energy', x: pickup.x, y: pickup.y, life: .35, maxLife: .35 });
   }
   state.pickups = state.pickups.filter(pickup => !pickup.collected);
-  if (state.roomType === 'boss' && state.turrets.length === 0 && state.phase !== 'victory') {
+  if (state.roomType === 'boss' && state.boss.health <= 0 && state.phase !== 'victory') {
+    state.run.score += ECONOMY.bossReward;
     state.phase = 'victory';
     state.projectiles.length = 0;
     events.push({ type: 'victory' });
@@ -722,6 +836,7 @@ export function updateGame(state, input, dt) {
   }
   updateSwordAttack(state);
   updateCrystals(state, dt);
+  updateBoss(state, dt);
   updateTurrets(state, dt);
   updateMobileEnemies(state, dt);
   updateProjectiles(state, dt, events);

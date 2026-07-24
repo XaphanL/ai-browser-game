@@ -32,7 +32,9 @@ function drawCapture(ctx, state) {
 }
 
 function drawReinforcementWarning(ctx, state) {
-  const wave = state.reinforcements;
+  const wave = state.boss?.reinforcementWarning > 0
+    ? { portal: state.boss.reinforcementPortal, warning: state.boss.reinforcementWarning }
+    : state.reinforcements;
   if (!wave?.portal || wave.warning <= 0) return;
   const pulse = 20 + Math.sin(state.elapsed * 22) * 7;
   ctx.strokeStyle = '#ff5d7a'; ctx.lineWidth = 5;
@@ -128,16 +130,22 @@ function drawTurrets(ctx, state) {
   for (const turret of state.turrets) {
     const angle = Math.atan2(state.player.y - turret.y, state.player.x - turret.x);
     ctx.save(); ctx.translate(turret.x, turret.y); ctx.rotate(angle);
-    if (turret.type === 'drone') {
+    if (turret.type === 'drone' || turret.type === 'heavyDrone') {
+      const heavy = turret.type === 'heavyDrone';
       ctx.fillStyle = turret.flash ? '#fff' : '#ffbd59';
-      ctx.strokeStyle = '#fff1a6'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(0, 9); ctx.lineTo(-13, 0); ctx.lineTo(0, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = heavy && turret.windup > 0 ? '#ff5d7a' : '#fff1a6'; ctx.lineWidth = heavy ? 4 : 2;
+      const scale = heavy ? 1.65 : 1;
+      ctx.beginPath(); ctx.moveTo(13 * scale, 0); ctx.lineTo(0, 9 * scale); ctx.lineTo(-13 * scale, 0); ctx.lineTo(0, -9 * scale); ctx.closePath(); ctx.fill(); ctx.stroke();
       if (turret.marked) {
         ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(0, 0, turret.radius + 8, 0, Math.PI * 2); ctx.stroke();
       }
       ctx.strokeStyle = '#ffbd59'; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, 10); ctx.moveTo(-18, 10); ctx.lineTo(18, -10); ctx.stroke();
       ctx.restore();
+      if (heavy) {
+        ctx.fillStyle = '#2b2112'; ctx.fillRect(turret.x - 24, turret.y + 29, 48, 5);
+        ctx.fillStyle = '#ffbd59'; ctx.fillRect(turret.x - 24, turret.y + 29, 48 * turret.health / turret.maxHealth, 5);
+      }
       continue;
     }
     if (turret.type === 'swordsman') {
@@ -176,6 +184,30 @@ function drawTurrets(ctx, state) {
       for (let i = 0; i < turret.health; i++) { ctx.fillStyle = '#ff7690'; ctx.fillRect(turret.x - 13 + i * 10, turret.y + 24, 7, 3); }
     }
   }
+}
+
+function drawBoss(ctx, state) {
+  const boss = state.boss;
+  if (!boss || state.phase === 'victory') return;
+  ctx.save(); ctx.translate(boss.x, boss.y);
+  const rotation = state.elapsed * (boss.phase === 'siege' ? .35 : .15);
+  ctx.rotate(rotation);
+  ctx.fillStyle = '#241638'; ctx.strokeStyle = boss.shieldOpen ? '#ff9fb2' : '#bd83ff'; ctx.lineWidth = 7;
+  ctx.beginPath();
+  for (let index = 0; index < 8; index++) {
+    const angle = index * Math.PI / 4;
+    const radius = boss.radius + 18;
+    if (index) ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius); else ctx.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.rotate(-rotation);
+  ctx.fillStyle = boss.shieldOpen ? '#ff5d7a' : '#6d3fc0';
+  ctx.beginPath(); ctx.arc(0, 0, boss.radius - 10, 0, Math.PI * 2); ctx.fill();
+  if (!boss.shieldOpen) { ctx.strokeStyle = '#d7b4ff88'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, boss.radius + 28, .45, Math.PI * 2 - .45); ctx.stroke(); }
+  ctx.restore();
+  ctx.fillStyle = '#231535'; ctx.fillRect(boss.x - 110, boss.y - 105, 220, 10);
+  ctx.fillStyle = '#bd83ff'; ctx.fillRect(boss.x - 110, boss.y - 105, 220 * boss.health / boss.maxHealth, 10);
+  ctx.strokeStyle = '#e5c7ff'; ctx.strokeRect(boss.x - 110, boss.y - 105, 220, 10);
 }
 
 function drawSpawners(ctx, state) {
@@ -302,7 +334,7 @@ export function createRenderer(canvas) {
   return state => {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
-    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawReinforcementWarning(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawTurrets(ctx, state);
+    drawGrid(ctx); drawExits(ctx, state); drawCapture(ctx, state); drawReinforcementWarning(ctx, state); drawObstacles(ctx, state); drawMerchant(ctx, state); drawCrystals(ctx, state); drawSpawners(ctx, state); drawBoss(ctx, state); drawTurrets(ctx, state);
     for (const bullet of state.projectiles) {
       ctx.fillStyle = bullet.reflected ? '#61f6d2' : '#ff6b83';
       ctx.shadowBlur = bullet.reflected ? 22 : 12; ctx.shadowColor = ctx.fillStyle;
